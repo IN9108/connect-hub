@@ -2,7 +2,7 @@ adx_displayorder: 11
 adx_enablerating: false
 adx_enabletracking: false
 adx_excludefromsearch: false
-adx_hiddenfromsitemap: true
+adx_hiddenfromsitemap: false
 adx_isroot: true
 adx_name: Admin Dashboard
 adx_pagetemplateid: a58b3fad-c6c6-4b81-a13d-be720b88a783

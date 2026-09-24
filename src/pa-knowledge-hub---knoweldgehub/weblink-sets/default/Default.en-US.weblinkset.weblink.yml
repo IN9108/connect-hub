@@ -331,8 +331,6 @@
   adx_robotsfollowlink: true
   adx_weblinkid: cf216a01-69b2-a973-d64f-aca81c972c3a
   adx_weblinksetid: fa50f1c2-0f95-47fb-a8f2-ada960cd6a5e
-  statecode: 1
-  statuscode: 2
 - adx_displayimageonly: false
   adx_displayorder: 13
   adx_displaypagechildlinks: false

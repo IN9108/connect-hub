@@ -302,6 +302,11 @@ window.addEventListener("load", async () => {
       "Homepage Dashboard failed to load configuration state:",
       err,
     );
+    const notice = document.createElement("p");
+    notice.className = "loading-state";
+    notice.setAttribute("role", "alert");
+    notice.textContent = "Your learning data could not load. Refresh the page or contact the site administrator.";
+    document.querySelector(".dashboard-shell")?.prepend(notice);
   } finally {
     if (textCycleInterval) clearInterval(textCycleInterval);
     if (overlay) overlay.classList.add("hidden");

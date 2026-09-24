@@ -149,7 +149,7 @@
 
 .prompt-library-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* Spans across screen in 4 columns */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   width: 100%;
   margin-top: 28px;
@@ -329,18 +329,6 @@
    RESPONSIVE BREAKPOINTS
    ========================================== */
 
-@media (max-width: 1600px) {
-  .prompt-library-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 1100px) {
-  .prompt-library-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
   .prompt-library-grid,
   .prompt-overview {
@@ -402,7 +390,6 @@
 .hero-pill, .overview-number, .prompt-card-tag { color: var(--accent-text); }
 .prompt-overview { max-width: none; margin-bottom: 40px; }
 .prompt-overview-card { text-align: left; padding: 24px; border-radius: 16px; }
-.prompt-library-grid { grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); }
 .prompt-search, .filter-btn, .submit-prompt-btn { border-radius: 12px; min-height: 48px; }
 .submit-prompt-btn, .filter-btn.active { color: #1f2929; }
 .submit-prompt-btn:hover { color: #fff; }

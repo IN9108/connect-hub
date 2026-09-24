@@ -178,9 +178,9 @@ function post() {
     const payload = { crd38_name: name };
     if (request.entityType === "testimony") {
       for (const [input, column] of [
-        ["photopath", "crd38_photopath"],
+        ["photopath", "crd38_imageurl"],
         ["quote", "crd38_quote"],
-        ["paragraph", "crd38_paragraph"],
+        ["paragraph", "crd38_paragraphs"],
         ["tags", "crd38_tags"],
       ]) payload[column] = String(data[input] || "").trim();
     } else {

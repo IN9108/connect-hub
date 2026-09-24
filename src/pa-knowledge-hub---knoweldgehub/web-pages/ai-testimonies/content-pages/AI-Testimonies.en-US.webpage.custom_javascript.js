@@ -9,9 +9,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           return result.data.map((item) => ({
             name: item.crd38_name || "",
             quote: item.crd38_quote || "",
-            paragraphs: String(item.crd38_paragraph || "").split(/\n\s*\n/).filter(Boolean),
+            paragraphs: String(item.crd38_paragraphs || "").split(/\n\s*\n/).filter(Boolean),
             tags: String(item.crd38_tags || "").split(",").map((tag) => tag.trim()).filter(Boolean),
-            image: { data: item.crd38_photopath || "" },
+            image: { data: item.crd38_imageurl || "" },
           }));
       } catch (error) {
         console.warn("Live testimonies are unavailable; using published stories.", error);

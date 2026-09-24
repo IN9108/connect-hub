@@ -1632,7 +1632,7 @@ body {
 }
 
 .best-practice-panel p {
-  color: white !important;
+  color: var(--muted) !important;
   margin: 0;
 }
 
@@ -1818,7 +1818,7 @@ body {
 }
 
 .advanced-row:hover .advanced-step {
-  background: #eef5e5;
+  background: var(--card);
 }
 
 /* =========================
@@ -1877,6 +1877,8 @@ body {
       transparent 40%
     ),
     var(--bg);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text);
   font-family: "ITC Avant Garde Gothic", "Century Gothic", Arial, sans-serif;
   font-size: 16px;

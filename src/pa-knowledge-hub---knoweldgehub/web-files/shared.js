@@ -5,9 +5,7 @@ window.ConnectHub = window.ConnectHub || {};
   const key = "connectHubTheme";
   let saved;
   try { saved = localStorage.getItem(key); } catch (_) {}
-  const preferred = saved === "light" || saved === "dark"
-    ? saved
-    : window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  const preferred = saved === "dark" ? "dark" : "light";
   function setTheme(theme, persist = false) {
     root.dataset.theme = theme;
     const button = document.getElementById("themeToggle");
@@ -121,8 +119,9 @@ window.TrainingHub = {
     if (!url)
       url = `/_api/serverlogics/TrainingHubMaster?action=${action}&currentPath=${encodeURIComponent(currentPath)}${extraParams}`;
 
+    const changingState = action === "updateState";
     const response = await fetch(url, {
-      method: action === "updateState" ? "POST" : "GET",
+      method: changingState ? "POST" : "GET",
       credentials: "same-origin",
       cache: "no-store",
       headers: {
@@ -130,7 +129,9 @@ window.TrainingHub = {
         "OData-MaxVersion": "4.0",
         "OData-Version": "4.0",
         __RequestVerificationToken: await ConnectHub.getToken(),
+        ...(changingState ? { "Content-Type": "application/json" } : {}),
       },
+      ...(changingState ? { body: "{}" } : {}),
     });
 
     if (!response.ok) {

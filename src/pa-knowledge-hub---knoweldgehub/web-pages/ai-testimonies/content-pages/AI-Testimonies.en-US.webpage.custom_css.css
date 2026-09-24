@@ -2,18 +2,6 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  background:
-    radial-gradient(
-      circle at top right,
-      rgba(139, 197, 63, 0.15),
-      transparent 25%
-    ),
-    radial-gradient(
-      circle at bottom left,
-      rgba(139, 197, 63, 0.12),
-      transparent 35%
-    ),
-    linear-gradient(180deg, var(--bg), var(--bg));
 }
 
 /* =====================================================
@@ -103,8 +91,12 @@ body {
 
 .floating-tags-row {
   width: 100%;
-  overflow: hidden;
   display: flex;
+}
+
+:root[data-theme="dark"] .floating-tags-wrapper::before,
+:root[data-theme="dark"] .floating-tags-wrapper::after {
+  background: none;
 }
 
 .floating-tags-track {

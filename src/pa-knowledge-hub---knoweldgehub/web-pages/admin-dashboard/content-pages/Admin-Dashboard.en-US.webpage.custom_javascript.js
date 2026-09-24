@@ -44,7 +44,7 @@ window.AdminHub = {
       item,
     );
     const customData = (
-      item?.crd38_photopath ||
+      item?.crd38_imageurl ||
       item?.image?.data ||
       ""
     ).trim();
@@ -219,6 +219,11 @@ window.AdminHub = {
       console.log("[AdminHub.init] Setup completed successfully.");
     } catch (err) {
       console.error("[AdminHub] Initialization failed:", err);
+      const notice = document.createElement("p");
+      notice.className = "loading-state";
+      notice.setAttribute("role", "alert");
+      notice.textContent = "Admin data could not load. Refresh the page or check your site access.";
+      document.querySelector(".admin-shell")?.prepend(notice);
     }
   },
 
@@ -986,11 +991,11 @@ window.AdminHub = {
     if (type === "testimony") {
       const name = item.crd38_name || item.name || "";
       const quote = item.crd38_quote || item.quote || "";
-      const paragraph = item.crd38_paragraph || item.paragraph || "";
+      const paragraph = item.crd38_paragraphs || item.paragraph || "";
       const tags =
         item.crd38_tags ||
         (Array.isArray(item.tags) ? item.tags.join(", ") : "");
-      const photoPath = item.crd38_photopath || item.image?.data || "";
+      const photoPath = item.crd38_imageurl || item.image?.data || "";
       const computedPath = this._getTestimonyImagePath(item);
 
       formFields = `
