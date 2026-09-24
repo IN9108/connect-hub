@@ -1,20 +1,13 @@
-2026-09-24T11:29:00.1886404+00:00
-ServerLogic
-
-Error
-/\_api/serverlogics/TrainingHubMaster
-Script validation failed: prohibited pattern found - Pattern: with\s\*\(
+things are loading now
 
-    2026-09-24T11:29:38.0700856+00:00
+these are fucked up idk why its just a partial line above the cards on the home page![alt text](image.png)
 
-ServerLogic
-
-Error
-/\_api/serverlogics/AdminHubMaster
-Script validation failed: prohibited pattern found - Pattern: Function\s\*\(
+the header still dosent have a line under it![alt text](image-1.png)
+admin page isnt visible in header despite me having the Administrator web role
 
-remember that these server logic scripts have sensitive syntax. rework them to be safe compliant and functional.
+caching isnt working? despite all the training being saved in session storage its still loading fresh when i go into training
+following on from that the home page has its loading screen evber time i vist it even tho the content should already be cahced?
 
-check with the solution that we have the needed tables and that all names are correct, if not fix.
+the footer is a different like shade to the header? i dont like that they should be the same
 
-bring back the green line on the bottom of the header and top of the footer like our other site, that looks clean
+testimonies arent loading its only test test![alt text](image-2.png)
