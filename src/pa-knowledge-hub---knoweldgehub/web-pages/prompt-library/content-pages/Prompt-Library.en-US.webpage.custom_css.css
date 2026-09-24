@@ -383,6 +383,7 @@
 }
 
 .prompt-library-page { max-width: 1400px; margin-inline: auto; padding: 32px; }
+.prompt-library-page .training-section { margin-inline: auto; }
 .prompt-library-page .training-hero { text-align: left; max-width: none; margin: 0 0 32px; padding: 0; }
 .prompt-library-page .training-hero h1 { color: var(--text); }
 .prompt-library-page .training-hero p { margin-left: 0; }
