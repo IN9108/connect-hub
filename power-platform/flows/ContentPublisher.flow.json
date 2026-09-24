@@ -1,0 +1,2188 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_75914"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_operation_created": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "crd38_contentoperation",
+              "subscriptionRequest/scope": 4
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger"
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          }
+        }
+      },
+      "actions": {
+        "Payload": {
+          "type": "Compose",
+          "inputs": "@json(triggerOutputs()?['body/crd38_payloadjson'])"
+        },
+        "Live_operation": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "crd38_contentoperations",
+              "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem"
+            }
+          },
+          "runAfter": {
+            "Payload": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Only_queued": {
+          "type": "If",
+          "expression": "@equals(outputs('Live_operation')?['body/crd38_status'],'queued')",
+          "actions": {},
+          "else": {
+            "actions": {
+              "Skip_processed": {
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Cancelled"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Live_operation": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Mark_running": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "crd38_contentoperations",
+              "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+              "item/crd38_status": "running"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateOnlyRecord"
+            }
+          },
+          "runAfter": {
+            "Only_queued": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Process": {
+          "type": "Scope",
+          "actions": {
+            "Existing_item": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "crd38_contentitems",
+                  "$filter": "@concat('crd38_contentitemid',' eq ',outputs('Payload')?['itemId'])",
+                  "$top": 1
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords"
+                }
+              }
+            },
+            "Revision_guard": {
+              "type": "If",
+              "expression": "@and(equals(outputs('Payload')?['itemId'],triggerOutputs()?['body/crd38_itemid']),or(and(empty(outputs('Existing_item')?['body/value']),equals(int(outputs('Payload')?['expectedRevision']),0),or(equals(outputs('Payload')?['action'],'save'),equals(outputs('Payload')?['kind'],'media'))),and(not(empty(outputs('Existing_item')?['body/value'])),equals(int(coalesce(first(outputs('Existing_item')?['body/value'])?['crd38_revision'],-1)),int(outputs('Payload')?['expectedRevision'])))))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "Revision_conflict_mark_failed": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "entityName": "crd38_contentoperations",
+                        "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                        "item/crd38_status": "failed",
+                        "item/crd38_error": "Someone changed this content. Reload and retry."
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "UpdateOnlyRecord"
+                      }
+                    }
+                  },
+                  "Revision_conflict_stop": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Failed",
+                      "runError": {
+                        "message": "Someone changed this content. Reload and retry."
+                      }
+                    },
+                    "runAfter": {
+                      "Revision_conflict_mark_failed": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Existing_item": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "If_save": {
+              "type": "If",
+              "expression": "@equals(outputs('Payload')?['action'],'save')",
+              "actions": {
+                "Save_check_route": {
+                  "type": "If",
+                  "expression": "@not(empty(outputs('Payload')?['pageUrl']))",
+                  "actions": {
+                    "Save_lookup_route": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_contentitems",
+                          "$filter": "@concat('crd38_pageurl eq ',decodeUriComponent('%27'),outputs('Payload')?['pageUrl'],decodeUriComponent('%27'),' and crd38_contentitemid ne ',outputs('Payload')?['itemId'])",
+                          "$top": 1
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords"
+                        }
+                      }
+                    },
+                    "Save_route_available": {
+                      "type": "If",
+                      "expression": "@empty(outputs('Save_lookup_route')?['body/value'])",
+                      "actions": {},
+                      "else": {
+                        "actions": {
+                          "Save_route_conflict_mark_failed": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentoperations",
+                                "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                "item/crd38_status": "failed",
+                                "item/crd38_error": "That page address is already in use."
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Save_route_conflict_stop": {
+                            "type": "Terminate",
+                            "inputs": {
+                              "runStatus": "Failed",
+                              "runError": {
+                                "message": "That page address is already in use."
+                              }
+                            },
+                            "runAfter": {
+                              "Save_route_conflict_mark_failed": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Save_lookup_route": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                },
+                "Save_new_or_existing": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Existing_item')?['body/value'])",
+                  "actions": {
+                    "Save_new_transaction": {
+                      "type": "Changeset",
+                      "kind": "ODataOpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ExecuteChangeset"
+                        }
+                      },
+                      "actions": {
+                        "Save_new_item": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_contentitems",
+                              "item/crd38_contentitemid": "@outputs('Payload')?['itemId']",
+                              "item/crd38_status": "draft",
+                              "item/crd38_name": "@outputs('Payload')?['title']",
+                              "item/crd38_kind": "@outputs('Payload')?['kind']",
+                              "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']",
+                              "item/crd38_sourcekey": "@outputs('Payload')?['sourceKey']",
+                              "item/crd38_businessid": "@outputs('Payload')?['businessId']",
+                              "item/crd38_pageid": "@outputs('Payload')?['pageId']",
+                              "item/crd38_contentpageid": "@outputs('Payload')?['contentPageId']",
+                              "item/crd38_mediaid": "@outputs('Payload')?['mediaId']",
+                              "item/crd38_draftjson": "@outputs('Payload')?['draftJson']",
+                              "item/crd38_templatejson": "@outputs('Payload')?['templateJson']",
+                              "item/crd38_revision": "@outputs('Payload')?['revision']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "CreateRecord"
+                            }
+                          }
+                        },
+                        "Save_new_done": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_contentoperations",
+                              "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                              "item/crd38_status": "succeeded"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Save_existing_transaction": {
+                        "type": "Changeset",
+                        "kind": "ODataOpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "ExecuteChangeset"
+                          }
+                        },
+                        "actions": {
+                          "Save_existing_item": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentitems",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_name": "@outputs('Payload')?['title']",
+                                "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']",
+                                "item/crd38_sourcekey": "@outputs('Payload')?['sourceKey']",
+                                "item/crd38_businessid": "@outputs('Payload')?['businessId']",
+                                "item/crd38_pageid": "@outputs('Payload')?['pageId']",
+                                "item/crd38_contentpageid": "@outputs('Payload')?['contentPageId']",
+                                "item/crd38_mediaid": "@outputs('Payload')?['mediaId']",
+                                "item/crd38_draftjson": "@outputs('Payload')?['draftJson']",
+                                "item/crd38_templatejson": "@outputs('Payload')?['templateJson']",
+                                "item/crd38_revision": "@outputs('Payload')?['revision']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Save_existing_done": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentoperations",
+                                "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                "item/crd38_status": "succeeded"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Save_check_route": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Revision_guard": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "If_media": {
+              "type": "If",
+              "expression": "@and(equals(outputs('Payload')?['action'],'publish'),equals(outputs('Payload')?['kind'],'media'))",
+              "actions": {
+                "Media_create_item_if_missing": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Existing_item')?['body/value'])",
+                  "actions": {
+                    "Media_create_item": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_contentitems",
+                          "item/crd38_contentitemid": "@outputs('Payload')?['itemId']",
+                          "item/crd38_status": "draft",
+                          "item/crd38_name": "@outputs('Payload')?['title']",
+                          "item/crd38_kind": "@outputs('Payload')?['kind']",
+                          "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']",
+                          "item/crd38_sourcekey": "@outputs('Payload')?['sourceKey']",
+                          "item/crd38_businessid": "@outputs('Payload')?['businessId']",
+                          "item/crd38_pageid": "@outputs('Payload')?['pageId']",
+                          "item/crd38_contentpageid": "@outputs('Payload')?['contentPageId']",
+                          "item/crd38_mediaid": "@outputs('Payload')?['mediaId']",
+                          "item/crd38_draftjson": "@outputs('Payload')?['draftJson']",
+                          "item/crd38_templatejson": "@outputs('Payload')?['templateJson']",
+                          "item/crd38_revision": "@outputs('Payload')?['revision']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                },
+                "Media_existing_file": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "powerpagecomponents",
+                      "$filter": "@concat('powerpagecomponentid',' eq ',outputs('Payload')?['mediaId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runAfter": {
+                    "Media_create_item_if_missing": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Media_safe_to_upload": {
+                  "type": "If",
+                  "expression": "@or(empty(outputs('Media_existing_file')?['body/value']),equals(json(coalesce(first(outputs('Media_existing_file')?['body/value'])?['content'],'{}'))?['publishingstateid'],'f071ded7-9951-4e29-9c19-8c3405e9d9d0'))",
+                  "actions": {},
+                  "else": {
+                    "actions": {
+                      "Media_live_overwrite_mark_failed": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "crd38_contentoperations",
+                            "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                            "item/crd38_status": "failed",
+                            "item/crd38_error": "Existing published image cannot be overwritten."
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "UpdateOnlyRecord"
+                          }
+                        }
+                      },
+                      "Media_live_overwrite_stop": {
+                        "type": "Terminate",
+                        "inputs": {
+                          "runStatus": "Failed",
+                          "runError": {
+                            "message": "Existing published image cannot be overwritten."
+                          }
+                        },
+                        "runAfter": {
+                          "Media_live_overwrite_mark_failed": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Media_existing_file": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Media_stage": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Media_existing_file')?['body/value'])",
+                  "actions": {
+                    "Media_create_file_draft": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "powerpagecomponents",
+                          "item/powerpagecomponentid": "@outputs('Payload')?['mediaId']",
+                          "item/name": "@outputs('Payload')?['filename']",
+                          "item/powerpagecomponenttype": 3,
+                          "item/powerpagesiteid@odata.bind": "/powerpagesites(4fcf5d22-8c56-43be-817c-8068dd99cfe3)",
+                          "item/content": "@string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'partialurl',outputs('Payload')?['filename']),'parentpageid',outputs('Payload')?['parentPageId']),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'contentdisposition',756150000),'hiddenfromsitemap',false),'excludefromsearch',false))"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Media_safe_to_upload": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Media_upload_file": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "powerpagecomponents",
+                      "recordId": "@outputs('Payload')?['mediaId']",
+                      "fileImageFieldName": "filecontent",
+                      "item": "@base64ToBinary(outputs('Payload')?['base64'])",
+                      "x-ms-file-name": "@outputs('Payload')?['filename']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateEntityFileImageFieldContent"
+                    }
+                  },
+                  "runAfter": {
+                    "Media_stage": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Media_lookup_public": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crd38_publishedcontents",
+                      "$filter": "@concat('crd38_publishedcontentid',' eq ',outputs('Payload')?['itemId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runAfter": {
+                    "Media_upload_file": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Media_stage_public": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Media_lookup_public')?['body/value'])",
+                  "actions": {
+                    "Media_create_public": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_publishedcontents",
+                          "item/crd38_publishedcontentid": "@outputs('Payload')?['itemId']",
+                          "item/crd38_name": "@outputs('Payload')?['title']",
+                          "item/crd38_kind": "@outputs('Payload')?['kind']",
+                          "item/crd38_status": "unpublished",
+                          "item/crd38_publishedjson": "",
+                          "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Media_lookup_public": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Media_commit": {
+                  "type": "Changeset",
+                  "kind": "ODataOpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ExecuteChangeset"
+                    }
+                  },
+                  "actions": {
+                    "Media_publish_file": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "powerpagecomponents",
+                          "recordId": "@outputs('Payload')?['mediaId']",
+                          "item/content": "@string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'partialurl',outputs('Payload')?['filename']),'parentpageid',outputs('Payload')?['parentPageId']),'publishingstateid','5e4f81ac-2be7-40b2-a145-28ab2c6bd3aa'),'contentdisposition',756150000),'hiddenfromsitemap',false),'excludefromsearch',false))"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "UpdateOnlyRecord"
+                        }
+                      }
+                    },
+                    "Media_publish_item": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_contentitems",
+                          "recordId": "@outputs('Payload')?['itemId']",
+                          "item/crd38_status": "published",
+                          "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                          "item/crd38_publishedrevision": "@outputs('Payload')?['revision']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "UpdateOnlyRecord"
+                        }
+                      }
+                    },
+                    "Media_publish_public": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_publishedcontents",
+                          "recordId": "@outputs('Payload')?['itemId']",
+                          "item/crd38_name": "@outputs('Payload')?['title']",
+                          "item/crd38_kind": "@outputs('Payload')?['kind']",
+                          "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                          "item/crd38_status": "@'published'",
+                          "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "UpdateOnlyRecord"
+                        }
+                      }
+                    },
+                    "Media_complete": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_contentoperations",
+                          "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                          "item/crd38_status": "succeeded"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "UpdateOnlyRecord"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Media_stage_public": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "If_save": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "If_page_publish": {
+              "type": "If",
+              "expression": "@and(equals(outputs('Payload')?['action'],'publish'),not(equals(outputs('Payload')?['kind'],'media')),not(empty(outputs('Payload')?['pageId'])))",
+              "actions": {
+                "Page_publish_get_root": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "powerpagecomponents",
+                      "$filter": "@concat('powerpagecomponentid',' eq ',outputs('Payload')?['pageId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  }
+                },
+                "Page_publish_get_localized": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "powerpagecomponents",
+                      "$filter": "@concat('powerpagecomponentid',' eq ',outputs('Payload')?['contentPageId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runAfter": {
+                    "Page_publish_get_root": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_publish_stage_root": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Page_publish_get_root')?['body/value'])",
+                  "actions": {
+                    "Page_publish_create_root": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "powerpagecomponents",
+                          "item/powerpagecomponentid": "@outputs('Payload')?['pageId']",
+                          "item/name": "@outputs('Payload')?['title']",
+                          "item/powerpagecomponenttype": 2,
+                          "item/powerpagesiteid@odata.bind": "/powerpagesites(4fcf5d22-8c56-43be-817c-8068dd99cfe3)",
+                          "item/content": "@string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',true),'title',outputs('Payload')?['title']),'copy',''),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false))",
+                          "item/searchcontent": "@outputs('Payload')?['title']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Page_publish_get_localized": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_publish_stage_localized": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Page_publish_get_localized')?['body/value'])",
+                  "actions": {
+                    "Page_publish_create_localized": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "powerpagecomponents",
+                          "item/powerpagecomponentid": "@outputs('Payload')?['contentPageId']",
+                          "item/name": "@outputs('Payload')?['title']",
+                          "item/powerpagecomponenttype": 2,
+                          "item/powerpagesiteid@odata.bind": "/powerpagesites(4fcf5d22-8c56-43be-817c-8068dd99cfe3)",
+                          "item/content": "@string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',false),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false),'rootwebpageid',outputs('Payload')?['pageId']),'webpagelanguageid','0efd3c55-b7ce-474b-81e1-65fb1fb49f70'))",
+                          "item/searchcontent": "@outputs('Payload')?['title']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Page_publish_stage_root": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_publish_lookup_public": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crd38_publishedcontents",
+                      "$filter": "@concat('crd38_publishedcontentid',' eq ',outputs('Payload')?['itemId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runAfter": {
+                    "Page_publish_stage_localized": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_publish_stage_public": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Page_publish_lookup_public')?['body/value'])",
+                  "actions": {
+                    "Page_publish_create_public": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_publishedcontents",
+                          "item/crd38_publishedcontentid": "@outputs('Payload')?['itemId']",
+                          "item/crd38_name": "@outputs('Payload')?['title']",
+                          "item/crd38_kind": "@outputs('Payload')?['kind']",
+                          "item/crd38_status": "unpublished",
+                          "item/crd38_publishedjson": "",
+                          "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Page_publish_lookup_public": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_publish_has_business": {
+                  "type": "If",
+                  "expression": "@not(empty(outputs('Payload')?['businessTable']))",
+                  "actions": {
+                    "Page_publishb_lookup_business": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@outputs('Payload')?['businessTable']",
+                          "$filter": "@concat(outputs('Payload')?['businessKey'],' eq ',outputs('Payload')?['businessId'])",
+                          "$top": 1
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords"
+                        }
+                      }
+                    },
+                    "Page_publishb_new_or_existing": {
+                      "type": "If",
+                      "expression": "@empty(outputs('Page_publishb_lookup_business')?['body/value'])",
+                      "actions": {
+                        "Page_publishb_commit_new": {
+                          "type": "Changeset",
+                          "kind": "ODataOpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "ExecuteChangeset"
+                            }
+                          },
+                          "actions": {
+                            "Page_publishbn_root": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "powerpagecomponents",
+                                  "recordId": "@outputs('Payload')?['pageId']",
+                                  "item/content": "@string(setProperty(setProperty(if(empty(outputs('Page_publish_get_root')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',true),'title',outputs('Payload')?['title']),'copy',''),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false))),json(first(outputs('Page_publish_get_root')?['body/value'])?['content'])),'title',outputs('Payload')?['title']),'publishingstateid','5e4f81ac-2be7-40b2-a145-28ab2c6bd3aa'))",
+                                  "item/name": "@outputs('Payload')?['title']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            },
+                            "Page_publishbn_localized": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "powerpagecomponents",
+                                  "recordId": "@outputs('Payload')?['contentPageId']",
+                                  "item/content": "@string(setProperty(setProperty(setProperty(if(empty(outputs('Page_publish_get_localized')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',false),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false),'rootwebpageid',outputs('Payload')?['pageId']),'webpagelanguageid','0efd3c55-b7ce-474b-81e1-65fb1fb49f70'))),json(first(outputs('Page_publish_get_localized')?['body/value'])?['content'])),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','5e4f81ac-2be7-40b2-a145-28ab2c6bd3aa'))",
+                                  "item/name": "@outputs('Payload')?['title']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            },
+                            "Page_publishbn_business": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "@outputs('Payload')?['businessTable']",
+                                  "item": "@setProperty(removeProperty(outputs('Payload')?['businessPayload'],'statecode'),outputs('Payload')?['businessKey'],outputs('Payload')?['businessId'])"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "CreateRecord"
+                                }
+                              }
+                            },
+                            "Page_publishbn_item": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crd38_contentitems",
+                                  "recordId": "@outputs('Payload')?['itemId']",
+                                  "item/crd38_status": "published",
+                                  "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                  "item/crd38_publishedrevision": "@outputs('Payload')?['revision']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            },
+                            "Page_publishbn_public": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crd38_publishedcontents",
+                                  "recordId": "@outputs('Payload')?['itemId']",
+                                  "item/crd38_name": "@outputs('Payload')?['title']",
+                                  "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                  "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                  "item/crd38_status": "@'published'",
+                                  "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            },
+                            "Page_publishbn_done": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crd38_contentoperations",
+                                  "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                  "item/crd38_status": "succeeded"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Page_publishb_commit_existing": {
+                            "type": "Changeset",
+                            "kind": "ODataOpenApiConnection",
+                            "inputs": {
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "ExecuteChangeset"
+                              }
+                            },
+                            "actions": {
+                              "Page_publishbe_root": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "powerpagecomponents",
+                                    "recordId": "@outputs('Payload')?['pageId']",
+                                    "item/content": "@string(setProperty(setProperty(if(empty(outputs('Page_publish_get_root')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',true),'title',outputs('Payload')?['title']),'copy',''),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false))),json(first(outputs('Page_publish_get_root')?['body/value'])?['content'])),'title',outputs('Payload')?['title']),'publishingstateid','5e4f81ac-2be7-40b2-a145-28ab2c6bd3aa'))",
+                                    "item/name": "@outputs('Payload')?['title']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Page_publishbe_localized": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "powerpagecomponents",
+                                    "recordId": "@outputs('Payload')?['contentPageId']",
+                                    "item/content": "@string(setProperty(setProperty(setProperty(if(empty(outputs('Page_publish_get_localized')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',false),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false),'rootwebpageid',outputs('Payload')?['pageId']),'webpagelanguageid','0efd3c55-b7ce-474b-81e1-65fb1fb49f70'))),json(first(outputs('Page_publish_get_localized')?['body/value'])?['content'])),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','5e4f81ac-2be7-40b2-a145-28ab2c6bd3aa'))",
+                                    "item/name": "@outputs('Payload')?['title']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Page_publishbe_business": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "@outputs('Payload')?['businessTable']",
+                                    "recordId": "@outputs('Payload')?['businessId']",
+                                    "item": "@outputs('Payload')?['businessPayload']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Page_publishbe_item": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "crd38_contentitems",
+                                    "recordId": "@outputs('Payload')?['itemId']",
+                                    "item/crd38_status": "published",
+                                    "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                    "item/crd38_publishedrevision": "@outputs('Payload')?['revision']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Page_publishbe_public": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "crd38_publishedcontents",
+                                    "recordId": "@outputs('Payload')?['itemId']",
+                                    "item/crd38_name": "@outputs('Payload')?['title']",
+                                    "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                    "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                    "item/crd38_status": "@'published'",
+                                    "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Page_publishbe_done": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "crd38_contentoperations",
+                                    "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                    "item/crd38_status": "succeeded"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Page_publishb_lookup_business": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Page_publish_commit_plain": {
+                        "type": "Changeset",
+                        "kind": "ODataOpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "ExecuteChangeset"
+                          }
+                        },
+                        "actions": {
+                          "Page_publishp_root": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "powerpagecomponents",
+                                "recordId": "@outputs('Payload')?['pageId']",
+                                "item/content": "@string(setProperty(setProperty(if(empty(outputs('Page_publish_get_root')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',true),'title',outputs('Payload')?['title']),'copy',''),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false))),json(first(outputs('Page_publish_get_root')?['body/value'])?['content'])),'title',outputs('Payload')?['title']),'publishingstateid','5e4f81ac-2be7-40b2-a145-28ab2c6bd3aa'))",
+                                "item/name": "@outputs('Payload')?['title']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_publishp_localized": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "powerpagecomponents",
+                                "recordId": "@outputs('Payload')?['contentPageId']",
+                                "item/content": "@string(setProperty(setProperty(setProperty(if(empty(outputs('Page_publish_get_localized')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',false),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false),'rootwebpageid',outputs('Payload')?['pageId']),'webpagelanguageid','0efd3c55-b7ce-474b-81e1-65fb1fb49f70'))),json(first(outputs('Page_publish_get_localized')?['body/value'])?['content'])),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','5e4f81ac-2be7-40b2-a145-28ab2c6bd3aa'))",
+                                "item/name": "@outputs('Payload')?['title']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_publishp_item": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentitems",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_status": "published",
+                                "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                "item/crd38_publishedrevision": "@outputs('Payload')?['revision']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_publishp_public": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_publishedcontents",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_name": "@outputs('Payload')?['title']",
+                                "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                "item/crd38_status": "@'published'",
+                                "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_publishp_done": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentoperations",
+                                "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                "item/crd38_status": "succeeded"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Page_publish_stage_public": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "If_media": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "If_simple_publish": {
+              "type": "If",
+              "expression": "@and(equals(outputs('Payload')?['action'],'publish'),not(equals(outputs('Payload')?['kind'],'media')),empty(outputs('Payload')?['pageId']))",
+              "actions": {
+                "Simple_publish_lookup_public": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crd38_publishedcontents",
+                      "$filter": "@concat('crd38_publishedcontentid',' eq ',outputs('Payload')?['itemId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  }
+                },
+                "Simple_publish_stage_public": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Simple_publish_lookup_public')?['body/value'])",
+                  "actions": {
+                    "Simple_publish_create_public": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_publishedcontents",
+                          "item/crd38_publishedcontentid": "@outputs('Payload')?['itemId']",
+                          "item/crd38_name": "@outputs('Payload')?['title']",
+                          "item/crd38_kind": "@outputs('Payload')?['kind']",
+                          "item/crd38_status": "unpublished",
+                          "item/crd38_publishedjson": "",
+                          "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Simple_publish_lookup_public": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Simple_publish_has_business": {
+                  "type": "If",
+                  "expression": "@not(empty(outputs('Payload')?['businessTable']))",
+                  "actions": {
+                    "Simple_publishb_lookup_business": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "@outputs('Payload')?['businessTable']",
+                          "$filter": "@concat(outputs('Payload')?['businessKey'],' eq ',outputs('Payload')?['businessId'])",
+                          "$top": 1
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ListRecords"
+                        }
+                      }
+                    },
+                    "Simple_publishb_new_or_existing": {
+                      "type": "If",
+                      "expression": "@empty(outputs('Simple_publishb_lookup_business')?['body/value'])",
+                      "actions": {
+                        "Simple_publishb_commit_new": {
+                          "type": "Changeset",
+                          "kind": "ODataOpenApiConnection",
+                          "inputs": {
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "ExecuteChangeset"
+                            }
+                          },
+                          "actions": {
+                            "Simple_publishbn_business": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "@outputs('Payload')?['businessTable']",
+                                  "item": "@setProperty(removeProperty(outputs('Payload')?['businessPayload'],'statecode'),outputs('Payload')?['businessKey'],outputs('Payload')?['businessId'])"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "CreateRecord"
+                                }
+                              }
+                            },
+                            "Simple_publishbn_item": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crd38_contentitems",
+                                  "recordId": "@outputs('Payload')?['itemId']",
+                                  "item/crd38_status": "published",
+                                  "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                  "item/crd38_publishedrevision": "@outputs('Payload')?['revision']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            },
+                            "Simple_publishbn_public": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crd38_publishedcontents",
+                                  "recordId": "@outputs('Payload')?['itemId']",
+                                  "item/crd38_name": "@outputs('Payload')?['title']",
+                                  "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                  "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                  "item/crd38_status": "@'published'",
+                                  "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            },
+                            "Simple_publishbn_done": {
+                              "type": "OpenApiConnection",
+                              "inputs": {
+                                "parameters": {
+                                  "entityName": "crd38_contentoperations",
+                                  "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                  "item/crd38_status": "succeeded"
+                                },
+                                "host": {
+                                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                  "connectionName": "shared_commondataserviceforapps",
+                                  "operationId": "UpdateOnlyRecord"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Simple_publishb_commit_existing": {
+                            "type": "Changeset",
+                            "kind": "ODataOpenApiConnection",
+                            "inputs": {
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "ExecuteChangeset"
+                              }
+                            },
+                            "actions": {
+                              "Simple_publishbe_business": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "@outputs('Payload')?['businessTable']",
+                                    "recordId": "@outputs('Payload')?['businessId']",
+                                    "item": "@outputs('Payload')?['businessPayload']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Simple_publishbe_item": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "crd38_contentitems",
+                                    "recordId": "@outputs('Payload')?['itemId']",
+                                    "item/crd38_status": "published",
+                                    "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                    "item/crd38_publishedrevision": "@outputs('Payload')?['revision']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Simple_publishbe_public": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "crd38_publishedcontents",
+                                    "recordId": "@outputs('Payload')?['itemId']",
+                                    "item/crd38_name": "@outputs('Payload')?['title']",
+                                    "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                    "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                    "item/crd38_status": "@'published'",
+                                    "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              },
+                              "Simple_publishbe_done": {
+                                "type": "OpenApiConnection",
+                                "inputs": {
+                                  "parameters": {
+                                    "entityName": "crd38_contentoperations",
+                                    "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                    "item/crd38_status": "succeeded"
+                                  },
+                                  "host": {
+                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                    "connectionName": "shared_commondataserviceforapps",
+                                    "operationId": "UpdateOnlyRecord"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "Simple_publishb_lookup_business": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Simple_publish_commit_plain": {
+                        "type": "Changeset",
+                        "kind": "ODataOpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "ExecuteChangeset"
+                          }
+                        },
+                        "actions": {
+                          "Simple_publishp_item": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentitems",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_status": "published",
+                                "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                "item/crd38_publishedrevision": "@outputs('Payload')?['revision']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Simple_publishp_public": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_publishedcontents",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_name": "@outputs('Payload')?['title']",
+                                "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                "item/crd38_publishedjson": "@outputs('Payload')?['publishedJson']",
+                                "item/crd38_status": "@'published'",
+                                "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Simple_publishp_done": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentoperations",
+                                "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                "item/crd38_status": "succeeded"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Simple_publish_stage_public": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "If_page_publish": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "If_page_unpublish": {
+              "type": "If",
+              "expression": "@and(equals(outputs('Payload')?['action'],'unpublish'),not(empty(outputs('Payload')?['pageId'])))",
+              "actions": {
+                "Page_unpublish_get_root": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "powerpagecomponents",
+                      "$filter": "@concat('powerpagecomponentid',' eq ',outputs('Payload')?['pageId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  }
+                },
+                "Page_unpublish_get_localized": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "powerpagecomponents",
+                      "$filter": "@concat('powerpagecomponentid',' eq ',outputs('Payload')?['contentPageId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runAfter": {
+                    "Page_unpublish_get_root": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_unpublish_pages_exist": {
+                  "type": "If",
+                  "expression": "@and(not(empty(outputs('Page_unpublish_get_root')?['body/value'])),not(empty(outputs('Page_unpublish_get_localized')?['body/value'])))",
+                  "actions": {},
+                  "else": {
+                    "actions": {
+                      "Page_unpublish_missing_pages_mark_failed": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "entityName": "crd38_contentoperations",
+                            "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                            "item/crd38_status": "failed",
+                            "item/crd38_error": "Published page records are missing."
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "UpdateOnlyRecord"
+                          }
+                        }
+                      },
+                      "Page_unpublish_missing_pages_stop": {
+                        "type": "Terminate",
+                        "inputs": {
+                          "runStatus": "Failed",
+                          "runError": {
+                            "message": "Published page records are missing."
+                          }
+                        },
+                        "runAfter": {
+                          "Page_unpublish_missing_pages_mark_failed": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Page_unpublish_get_localized": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_unpublish_lookup_public": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crd38_publishedcontents",
+                      "$filter": "@concat('crd38_publishedcontentid',' eq ',outputs('Payload')?['itemId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  },
+                  "runAfter": {
+                    "Page_unpublish_pages_exist": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_unpublish_stage_public": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Page_unpublish_lookup_public')?['body/value'])",
+                  "actions": {
+                    "Page_unpublish_create_public": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_publishedcontents",
+                          "item/crd38_publishedcontentid": "@outputs('Payload')?['itemId']",
+                          "item/crd38_name": "@outputs('Payload')?['title']",
+                          "item/crd38_kind": "@outputs('Payload')?['kind']",
+                          "item/crd38_status": "unpublished",
+                          "item/crd38_publishedjson": "",
+                          "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Page_unpublish_lookup_public": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Page_unpublish_has_business": {
+                  "type": "If",
+                  "expression": "@not(empty(outputs('Payload')?['businessTable']))",
+                  "actions": {
+                    "Page_unpublishb_commit": {
+                      "type": "Changeset",
+                      "kind": "ODataOpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ExecuteChangeset"
+                        }
+                      },
+                      "actions": {
+                        "Page_unpublishbe_root": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "powerpagecomponents",
+                              "recordId": "@outputs('Payload')?['pageId']",
+                              "item/content": "@string(setProperty(if(empty(outputs('Page_unpublish_get_root')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',true),'title',outputs('Payload')?['title']),'copy',''),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false))),json(first(outputs('Page_unpublish_get_root')?['body/value'])?['content'])),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'))",
+                              "item/name": "@outputs('Payload')?['title']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Page_unpublishbe_localized": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "powerpagecomponents",
+                              "recordId": "@outputs('Payload')?['contentPageId']",
+                              "item/content": "@string(setProperty(if(empty(outputs('Page_unpublish_get_localized')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',false),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false),'rootwebpageid',outputs('Payload')?['pageId']),'webpagelanguageid','0efd3c55-b7ce-474b-81e1-65fb1fb49f70'))),json(first(outputs('Page_unpublish_get_localized')?['body/value'])?['content'])),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'))",
+                              "item/name": "@outputs('Payload')?['title']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Page_unpublishbe_business": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "@outputs('Payload')?['businessTable']",
+                              "recordId": "@outputs('Payload')?['businessId']",
+                              "item": "@outputs('Payload')?['businessPayload']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Page_unpublishbe_item": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_contentitems",
+                              "recordId": "@outputs('Payload')?['itemId']",
+                              "item/crd38_status": "unpublished"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Page_unpublishbe_public": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_publishedcontents",
+                              "recordId": "@outputs('Payload')?['itemId']",
+                              "item/crd38_name": "@outputs('Payload')?['title']",
+                              "item/crd38_kind": "@outputs('Payload')?['kind']",
+                              "item/crd38_publishedjson": "@''",
+                              "item/crd38_status": "@'unpublished'",
+                              "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Page_unpublishbe_done": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_contentoperations",
+                              "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                              "item/crd38_status": "succeeded"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Page_unpublish_commit_plain": {
+                        "type": "Changeset",
+                        "kind": "ODataOpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "ExecuteChangeset"
+                          }
+                        },
+                        "actions": {
+                          "Page_unpublishp_root": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "powerpagecomponents",
+                                "recordId": "@outputs('Payload')?['pageId']",
+                                "item/content": "@string(setProperty(if(empty(outputs('Page_unpublish_get_root')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',true),'title',outputs('Payload')?['title']),'copy',''),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false))),json(first(outputs('Page_unpublish_get_root')?['body/value'])?['content'])),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'))",
+                                "item/name": "@outputs('Payload')?['title']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_unpublishp_localized": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "powerpagecomponents",
+                                "recordId": "@outputs('Payload')?['contentPageId']",
+                                "item/content": "@string(setProperty(if(empty(outputs('Page_unpublish_get_localized')?['body/value']),json(string(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(setProperty(json('{}'),'displayorder',json(outputs('Payload')?['draftJson'])?['displayOrder']),'pagetemplateid',outputs('Payload')?['pageTemplateId']),'parentpageid',outputs('Payload')?['parentPageId']),'partialurl',outputs('Payload')?['slug']),'isroot',false),'title',outputs('Payload')?['title']),'copy',outputs('Payload')?['html']),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'),'hiddenfromsitemap',false),'excludefromsearch',false),'sharedpageconfiguration',false),'rootwebpageid',outputs('Payload')?['pageId']),'webpagelanguageid','0efd3c55-b7ce-474b-81e1-65fb1fb49f70'))),json(first(outputs('Page_unpublish_get_localized')?['body/value'])?['content'])),'publishingstateid','f071ded7-9951-4e29-9c19-8c3405e9d9d0'))",
+                                "item/name": "@outputs('Payload')?['title']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_unpublishp_item": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentitems",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_status": "unpublished"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_unpublishp_public": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_publishedcontents",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_name": "@outputs('Payload')?['title']",
+                                "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                "item/crd38_publishedjson": "@''",
+                                "item/crd38_status": "@'unpublished'",
+                                "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Page_unpublishp_done": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentoperations",
+                                "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                "item/crd38_status": "succeeded"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Page_unpublish_stage_public": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "If_simple_publish": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "If_simple_unpublish": {
+              "type": "If",
+              "expression": "@and(equals(outputs('Payload')?['action'],'unpublish'),empty(outputs('Payload')?['pageId']))",
+              "actions": {
+                "Simple_unpublish_lookup_public": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crd38_publishedcontents",
+                      "$filter": "@concat('crd38_publishedcontentid',' eq ',outputs('Payload')?['itemId'])",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    }
+                  }
+                },
+                "Simple_unpublish_stage_public": {
+                  "type": "If",
+                  "expression": "@empty(outputs('Simple_unpublish_lookup_public')?['body/value'])",
+                  "actions": {
+                    "Simple_unpublish_create_public": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "entityName": "crd38_publishedcontents",
+                          "item/crd38_publishedcontentid": "@outputs('Payload')?['itemId']",
+                          "item/crd38_name": "@outputs('Payload')?['title']",
+                          "item/crd38_kind": "@outputs('Payload')?['kind']",
+                          "item/crd38_status": "unpublished",
+                          "item/crd38_publishedjson": "",
+                          "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Simple_unpublish_lookup_public": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Simple_unpublish_has_business": {
+                  "type": "If",
+                  "expression": "@not(empty(outputs('Payload')?['businessTable']))",
+                  "actions": {
+                    "Simple_unpublishb_commit": {
+                      "type": "Changeset",
+                      "kind": "ODataOpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "ExecuteChangeset"
+                        }
+                      },
+                      "actions": {
+                        "Simple_unpublishbe_business": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "@outputs('Payload')?['businessTable']",
+                              "recordId": "@outputs('Payload')?['businessId']",
+                              "item": "@outputs('Payload')?['businessPayload']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Simple_unpublishbe_item": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_contentitems",
+                              "recordId": "@outputs('Payload')?['itemId']",
+                              "item/crd38_status": "unpublished"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Simple_unpublishbe_public": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_publishedcontents",
+                              "recordId": "@outputs('Payload')?['itemId']",
+                              "item/crd38_name": "@outputs('Payload')?['title']",
+                              "item/crd38_kind": "@outputs('Payload')?['kind']",
+                              "item/crd38_publishedjson": "@''",
+                              "item/crd38_status": "@'unpublished'",
+                              "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        },
+                        "Simple_unpublishbe_done": {
+                          "type": "OpenApiConnection",
+                          "inputs": {
+                            "parameters": {
+                              "entityName": "crd38_contentoperations",
+                              "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                              "item/crd38_status": "succeeded"
+                            },
+                            "host": {
+                              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                              "connectionName": "shared_commondataserviceforapps",
+                              "operationId": "UpdateOnlyRecord"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Simple_unpublish_commit_plain": {
+                        "type": "Changeset",
+                        "kind": "ODataOpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                            "connectionName": "shared_commondataserviceforapps",
+                            "operationId": "ExecuteChangeset"
+                          }
+                        },
+                        "actions": {
+                          "Simple_unpublishp_item": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentitems",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_status": "unpublished"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Simple_unpublishp_public": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_publishedcontents",
+                                "recordId": "@outputs('Payload')?['itemId']",
+                                "item/crd38_name": "@outputs('Payload')?['title']",
+                                "item/crd38_kind": "@outputs('Payload')?['kind']",
+                                "item/crd38_publishedjson": "@''",
+                                "item/crd38_status": "@'unpublished'",
+                                "item/crd38_pageurl": "@outputs('Payload')?['pageUrl']"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          },
+                          "Simple_unpublishp_done": {
+                            "type": "OpenApiConnection",
+                            "inputs": {
+                              "parameters": {
+                                "entityName": "crd38_contentoperations",
+                                "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                                "item/crd38_status": "succeeded"
+                              },
+                              "host": {
+                                "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                                "connectionName": "shared_commondataserviceforapps",
+                                "operationId": "UpdateOnlyRecord"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Simple_unpublish_stage_public": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "If_page_unpublish": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Mark_running": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Failure_status": {
+          "type": "Scope",
+          "actions": {
+            "Check_failed_operation": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "crd38_contentoperations",
+                  "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "GetItem"
+                }
+              }
+            },
+            "If_still_running": {
+              "type": "If",
+              "expression": "@equals(outputs('Check_failed_operation')?['body/crd38_status'],'running')",
+              "actions": {
+                "Mark_failed": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "crd38_contentoperations",
+                      "recordId": "@triggerOutputs()?['body/crd38_contentoperationid']",
+                      "item/crd38_status": "failed",
+                      "item/crd38_error": "The operation failed. Ask an administrator to inspect the publisher flow run."
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "UpdateOnlyRecord"
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "Check_failed_operation": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Process": [
+              "Failed",
+              "TimedOut"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

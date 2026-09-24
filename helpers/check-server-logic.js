@@ -6,7 +6,7 @@ const path = require("node:path");
 const root = path.join(__dirname, "..", "src", "pa-knowledge-hub---knoweldgehub", "server-logic");
 for (const name of ["TrainingHubMaster", "AdminHubMaster"]) {
   const source = fs.readFileSync(path.join(root, `${name}.js`), "utf8");
-  assert(!/with\s*\(|Function\s*\(/i.test(source), `${name} contains a Power Pages prohibited pattern`);
+  assert(!/\bwith\s*\(|\bFunction\s*\(/.test(source), `${name} contains a Power Pages prohibited pattern`);
 }
 const contactId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const pathId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -54,26 +54,28 @@ server.Connector.Dataverse.RetrieveRecord = (entity) => JSON.stringify({ Body: J
   : entity === "crd38_learningpaths" ? learningPath : moduleRecord) });
 assert.equal(JSON.parse(training.post()).success, false, "Role restricted progress must be rejected");
 
+server.Connector.Dataverse.RetrieveRecord = (entity) => JSON.stringify({ Body: JSON.stringify(entity === "contacts" ? { jobtitle: "Agent" }
+  : entity === "crd38_learningpaths" ? learningPath : { ...moduleRecord, statecode: 1 }) });
+assert.equal(JSON.parse(training.post()).success, false, "Unpublished modules must reject progress writes");
+server.Connector.Dataverse.RetrieveRecord = (entity) => JSON.stringify({ Body: JSON.stringify(entity === "contacts" ? { jobtitle: "Agent" }
+  : entity === "crd38_learningpaths" ? { ...learningPath, statecode: 1 } : moduleRecord) });
+assert.equal(JSON.parse(training.post()).success, false, "Unpublished pathways must reject progress writes");
+for (const entity of ["crd38_learningpaths", "crd38_trainingmodules"])
+  assert(calls.some(([method, table, query]) => method === "read" && table === entity && query.includes("statecode eq 0")), "Catalogue reads must exclude unpublished content");
+
 const admin = { Server: server };
 vm.runInNewContext(fs.readFileSync(path.join(root, "AdminHubMaster.js"), "utf8"), admin);
 server.Context.QueryParameters = { action: "createData" };
 server.Context.Body = JSON.stringify({ entityType: "learningPath", data: { name: "New journey", displayOrder: 1, description: "Description" } });
-assert.equal(JSON.parse(admin.post()).success, true);
-assert(calls.some(([method, entity]) => method === "create" && entity === "crd38_learningpaths"));
+assert.equal(JSON.parse(admin.post()).success, false, "Legacy direct mutations must be disabled");
 server.Context.Body = JSON.stringify({ entityType: "testimony", data: { name: "Colleague", quote: "Helpful", paragraph: "Saved time", photopath: "/photo.jpg", tags: "Copilot" } });
-assert.equal(JSON.parse(admin.post()).success, true);
-const testimony = calls.find(([method, entity]) => method === "create" && entity === "crd38_aitestimonies")[2];
-assert.equal(testimony.crd38_imageurl, "/photo.jpg");
-assert.equal(testimony.crd38_paragraphs, "Saved time");
-assert.equal(testimony.crd38_photopath, undefined);
+assert.equal(JSON.parse(admin.post()).success, false);
 server.Context.Body = JSON.stringify({ entityType: "contacts", data: { name: "Unsafe" } });
 assert.equal(JSON.parse(admin.post()).success, false, "Admin writes must use the table allowlist");
 server.Context.Body = JSON.stringify({ entityType: "module", data: { name: "New module", displayOrder: 2, learningPathId: pathId, pageUrl: "/training/new", required: true } });
-assert.equal(JSON.parse(admin.post()).success, true);
-const createdModule = calls.findLast(([method, entity]) => method === "create" && entity === "crd38_trainingmodules")[2];
-assert.equal(createdModule["crd38_LearningPathRef@odata.bind"], `/crd38_learningpaths(${pathId})`);
+assert.equal(JSON.parse(admin.post()).success, false);
 server.Context.QueryParameters.action = "deleteData";
 server.Context.Body = JSON.stringify({ entityType: "module", id: moduleId });
-assert.equal(JSON.parse(admin.post()).success, true);
-assert(calls.some(([method, entity, id]) => method === "delete" && entity === "crd38_trainingmodules" && id === moduleId));
+assert.equal(JSON.parse(admin.post()).success, false, "Content must be unpublished without deleting progress history");
+require("./check-content-server.js");
 console.log("PASS ConnectHub server logic");

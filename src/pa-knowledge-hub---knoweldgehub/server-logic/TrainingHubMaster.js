@@ -235,10 +235,10 @@ function handleRequest(method) {
         .toLowerCase()
         .replace(/\/$/, "");
 
-      const learningPaths = fetchTableRecords(ENTITY.learningPaths, "", true);
+      const learningPaths = fetchTableRecords(ENTITY.learningPaths, "$filter=statecode eq 0", true);
       const progressRecords = fetchTableRecords(
         ENTITY.progress, `$filter=_crd38_contactidref_value eq ${contactId}`, true);
-      const allModules = fetchTableRecords(ENTITY.modules, "", true);
+      const allModules = fetchTableRecords(ENTITY.modules, "$filter=statecode eq 0", true);
 
       const visibleLearningPaths = learningPaths.filter((path) =>
         pathAllowsJobTitle(path, contactJobTitle));
@@ -596,7 +596,7 @@ function handleRequest(method) {
           .toLowerCase()
           .replace(/\/$/, "");
 
-        const allModules = fetchTableRecords(ENTITY.modules, "", true);
+        const allModules = fetchTableRecords(ENTITY.modules, "$filter=statecode eq 0", true);
         targetModule = allModules.find((m) => {
           const moduleUrl = (m.crd38_pageurl || "")
             .toLowerCase()
@@ -612,6 +612,7 @@ function handleRequest(method) {
       }
 
       const resolvedModuleId = targetModule.crd38_trainingmoduleid;
+      if (targetModule.statecode === 1) throw new Error("This module is no longer published.");
       const pathId = targetModule._crd38_learningpathref_value;
       if (pathId) {
         const contactResponse = Server.Connector.Dataverse.RetrieveRecord(
@@ -619,10 +620,10 @@ function handleRequest(method) {
         const contactEnvelope = JSON.parse(String(contactResponse));
         const contact = JSON.parse(contactEnvelope.Body);
         const pathResponse = Server.Connector.Dataverse.RetrieveRecord(
-          ENTITY.learningPaths, pathId, "$select=crd38_rolerequirement", true);
+          ENTITY.learningPaths, pathId, "$select=crd38_rolerequirement,statecode", true);
         const pathEnvelope = JSON.parse(String(pathResponse));
         const path = JSON.parse(pathEnvelope.Body);
-        if (!path || !pathAllowsJobTitle(path, contact.jobtitle))
+        if (!path || path.statecode === 1 || !pathAllowsJobTitle(path, contact.jobtitle))
           throw new Error("This learning journey is not available to your role.");
       }
 

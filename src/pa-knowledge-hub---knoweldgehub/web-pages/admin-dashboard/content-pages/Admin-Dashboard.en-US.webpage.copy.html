@@ -1,190 +1,30 @@
-<link
-  rel="stylesheet"
-  href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css"
-/>
-
-<div class="dashboard-shell admin-shell">
-  <section class="dashboard-hero">
-    <div class="hero-content">
-      <h1>Knowledge Hub Admin</h1>
-
-      <p class="hero-description">
-        Create learning journeys, build training modules, publish AI testimonies
-        and manage platform content from a single location.
-      </p>
-    </div>
-  </section>
-
-  <section class="dashboard-stats">
-    <div class="stat-card">
-      <span class="stat-number">0</span>
-      <span class="stat-label">Learning Journeys</span>
-    </div>
-
-    <div class="stat-card">
-      <span class="stat-number">0</span>
-      <span class="stat-label">Training Modules</span>
-    </div>
-
-    <div class="stat-card">
-      <span class="stat-number">0</span>
-      <span class="stat-label">AI Testimonies</span>
-    </div>
-  </section>
-
-  <section class="dashboard-section">
-    <div class="section-heading">
-      <span class="section-kicker">Learning Management</span>
-
-      <h2>Create &amp; Manage Learning</h2>
-
-      <p>Build learning journeys and manage all training content.</p>
-    </div>
-
-    <div class="admin-action-grid">
-      <div class="admin-action-card">
-        <div class="admin-action-icon green">
-          <i class="fi fi-rr-route"></i>
-        </div>
-
-        <h3>Manage Learning Journeys</h3>
-
-        <p>
-          Create, edit, reorder, delete and inspect modules within learning
-          journeys.
-        </p>
-
-        <button class="training-button" data-modal-type="learningPaths">
-          Open Workspace
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <section class="dashboard-section">
-    <div class="section-heading">
-      <span class="section-kicker">Content Management</span>
-
-      <h2>Create &amp; Manage Content</h2>
-
-      <p>Manage all site content.</p>
-    </div>
-
-    <div class="admin-action-grid">
-      <div class="admin-action-card">
-        <div class="admin-action-icon purple">
-          <i class="fi fi-rr-quote-right"></i>
-        </div>
-
-        <h3>Manage AI Testimonies</h3>
-
-        <p>Edit, retire, reorder and maintain published AI testimonies.</p>
-
-        <button class="training-button" data-modal-type="testimonies">
-          Open Workspace
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <section class="dashboard-section">
-    <div class="section-heading">
-      <span class="section-kicker">Administration Overview</span>
-
-      <h2>Recent Activity</h2>
-
-      <p>Quickly access the latest administrative activity and changes.</p>
-    </div>
-
-    <div class="dashboard-card">
-      <div id="recentActivity"></div>
-    </div>
-  </section>
-</div>
-
-<div id="adminModal" class="admin-modal" aria-hidden="true">
-  <div class="admin-modal-overlay" data-close-modal></div>
-
-  <div class="admin-modal-container" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="admin-workspace-header">
-      <div class="workspace-header-content">
-        <div class="workspace-badge">
-          <i class="fi fi-rr-apps"></i>
-          <span id="workspaceType">Learning Management</span>
-        </div>
-
-        <div>
-          <h2 id="modalTitle">Learning Journey Workspace</h2>
-
-          <p id="modalSubtitle">
-            Create, organise and maintain learning journeys.
-          </p>
-        </div>
-      </div>
-
-      <div class="workspace-actions">
-        <div class="workspace-search">
-          <i class="fi fi-rr-search"></i>
-
-          <input
-            id="workspaceSearch"
-            type="text"
-            aria-label="Search records"
-            placeholder="Search records..."
-          />
-        </div>
-
-        <button id="workspaceCreateBtn" class="training-button">
-          <i class="fi fi-rr-plus"></i>
-          Create New
-        </button>
-
-        <button class="modal-close-btn" data-close-modal aria-label="Close">
-          <i class="fi fi-rr-cross-small"></i>
-        </button>
-      </div>
-    </div>
-
-    <div class="admin-workspace-stats">
-      <div class="workspace-stat-pills">
-        <div class="workspace-stat">
-          <span id="workspaceTotalCount">0</span>
-          <label>Total Records</label>
-        </div>
-
-      </div>
-    </div>
-
-    <div class="admin-workspace-layout">
-      <aside class="admin-sidebar">
-        <div class="sidebar-section">
-          <h3>Navigation</h3>
-
-          <button class="sidebar-item active" data-nav="learningPaths">
-            <i class="fi fi-rr-route"></i>
-            Learning Journeys
-          </button>
-
-          <button class="sidebar-item" data-nav="testimonies">
-            <i class="fi fi-rr-quote-right"></i>
-            AI Testimonies
-          </button>
-        </div>
-
-        <div class="sidebar-section">
-          <h3>Quick Actions</h3>
-
-          <button class="sidebar-item" id="sidebarActionCreate">
-            <i class="fi fi-rr-plus"></i>
-            Create New
-          </button>
-
-        </div>
-      </aside>
-
-      <main class="admin-main">
-        <div id="modalBody" class="admin-workspace-grid"></div>
-      </main>
-    </div>
+<script src="/content.js" defer></script>
+<div class="dashboard-shell admin-shell" id="adminHub">
+  <a class="admin-skip" href="#adminMain">Skip to content</a>
+  <header class="admin-heading">
+    <div><span class="admin-kicker">Manager workspace</span><h1>Content editor</h1><p>Create, review and publish Knowledge Hub content.</p></div>
+    <div class="admin-actions admin-create-actions"><button class="admin-button" id="adminImport" type="button" hidden>Import existing content</button><label for="adminNewKind">Content type</label><select id="adminNewKind"><option value="learningPath">Learning pathway</option><option value="module">Training module</option><option value="prompt">Prompt</option><option value="testimony">Testimony</option><option value="agent">Agent</option><option value="page">Page content</option></select><button class="admin-button admin-button-primary" id="adminCreate" type="button">Create content</button></div>
+  </header>
+  <div class="admin-layout">
+    <nav class="admin-nav" aria-label="Content types" id="adminNav"></nav>
+    <main id="adminMain" class="admin-main" tabindex="-1">
+      <div id="adminNotice" class="admin-notice" role="status" aria-live="polite"></div>
+      <section id="adminListView" aria-labelledby="adminListTitle">
+        <div class="admin-section-head"><div><h2 id="adminListTitle">All content</h2><p>Choose an item to edit, or create something new.</p></div><button class="admin-button admin-button-primary" id="adminCreateInline" type="button">Create new</button></div>
+        <div class="admin-filters"><label for="adminSearch">Search content</label><input id="adminSearch" type="search" placeholder="Search by title or description"><label for="adminStatusFilter">Status</label><select id="adminStatusFilter"><option value="all">All statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option></select></div>
+        <div id="adminItems" class="admin-items" aria-live="polite"></div>
+      </section>
+      <section id="adminEditorView" hidden aria-labelledby="adminEditorTitle">
+        <div class="admin-section-head admin-editor-head"><div><button class="admin-link-button" id="adminBack" type="button">← Back to content</button><h2 id="adminEditorTitle">New content</h2><p id="adminEditorStatus"></p></div><div class="admin-actions"><button class="admin-button" id="adminPreview" type="button">Preview</button><button class="admin-button admin-button-primary" id="adminSave" type="button">Save draft</button></div></div>
+        <form id="adminForm" novalidate></form>
+        <div class="admin-publish-bar"><span id="adminPublishHint">Save a draft before publishing.</span><div class="admin-actions"><button class="admin-button" id="adminDuplicate" type="button" hidden>Duplicate</button><button class="admin-button admin-button-danger" id="adminUnpublish" type="button" hidden>Unpublish</button><button class="admin-button admin-button-primary" id="adminPublish" type="button">Publish</button></div></div>
+      </section>
+      <section id="adminImagesView" hidden aria-labelledby="adminImagesTitle">
+        <div class="admin-section-head"><div><h2 id="adminImagesTitle">Images</h2><p>Upload an image for a testimony or content section.</p></div></div>
+        <form id="adminUploadForm" class="admin-upload-form"><label for="adminImageFile">Image file</label><input id="adminImageFile" type="file" accept="image/jpeg,image/png,image/webp" required><label for="adminImageAlt">Image description</label><input id="adminImageAlt" type="text" required maxlength="250" placeholder="Describe the image for people using screen readers"><button class="admin-button admin-button-primary" type="submit">Upload image</button></form>
+        <div id="adminImages" class="admin-image-grid"></div>
+      </section>
+    </main>
   </div>
+  <dialog id="adminDialog" class="admin-dialog"><div class="admin-dialog-head"><h2 id="adminDialogTitle">Preview</h2><button id="adminDialogClose" class="admin-button" type="button">Close</button></div><div id="adminDialogBody"></div></dialog>
 </div>

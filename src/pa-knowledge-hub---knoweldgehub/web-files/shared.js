@@ -172,12 +172,9 @@ window.TrainingHub = {
     this._initPromise = (async () => {
       try {
         const dashboard = /^\/(?:training\/?)?$/i.test(window.location.pathname);
-        const serverResult = await ConnectHub.cache.get(
-          dashboard ? "training:dashboard" : `training:${window.location.pathname.toLowerCase()}`,
-          () => this._callServer("init", "", dashboard
-            ? "/_api/serverlogics/TrainingHubMaster?action=init&currentPath=%2F" : null),
-          force,
-        );
+        // Read the published catalogue on navigation; another manager may have changed it.
+        const serverResult = await this._callServer("init", "", dashboard
+          ? "/_api/serverlogics/TrainingHubMaster?action=init&currentPath=%2F" : null);
 
         if (typeof serverResult.data === "string") {
           this.state = JSON.parse(serverResult.data);
@@ -327,7 +324,7 @@ window.TrainingHub = {
       selectedButton.classList.add("incorrect");
 
       if (result) {
-        result.innerHTML = `Not quite. The correct answer is <strong>${correctAnswer}</strong>`;
+        result.innerHTML = `Not quite. The correct answer is <strong>${ConnectHub.escapeHtml(correctAnswer)}</strong>`;
       }
     } else {
       if (result) {

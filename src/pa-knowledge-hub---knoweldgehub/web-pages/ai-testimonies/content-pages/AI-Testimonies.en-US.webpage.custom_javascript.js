@@ -2,39 +2,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   let stories = [];
 
   try {
-    stories = await ConnectHub.cache.get("testimonies", async () => {
-      let published = [];
-      const [publishedResult, liveResult] = await Promise.allSettled([(async () => {
-        const response = await fetch("/ai-testimonies.json", { cache: "no-store" });
-        if (!response.ok) throw new Error(`Failed to load testimonies: ${response.status}`);
-        const data = await response.json();
-        if (!Array.isArray(data)) throw new Error("Published testimonies must contain an array.");
-        return data;
-      })(), TrainingHub._callServer("testimonies")]);
-      if (publishedResult.status === "fulfilled") published = publishedResult.value;
-      else console.warn("Published testimonies are unavailable.", publishedResult.reason);
-      if (liveResult.status === "fulfilled") {
-        const result = liveResult.value;
-        if (Array.isArray(result.data)) {
-          const storiesByName = new Map(published.map((item) => [item.name, item]));
-          result.data.forEach((item) => {
-            if (String(item.crd38_name || "").trim().toLowerCase() === "test" &&
-                String(item.crd38_quote || "").trim().toLowerCase() === "test") return;
-            storiesByName.set(item.crd38_name, {
-            name: item.crd38_name || "",
-            quote: item.crd38_quote || "",
-            paragraphs: String(item.crd38_paragraphs || "").split(/\n\s*\n/).filter(Boolean),
-            tags: String(item.crd38_tags || "").split(",").map((tag) => tag.trim()).filter(Boolean),
-            image: { data: item.crd38_imageurl || "" },
-            });
-          });
-          return [...storiesByName.values()];
-        }
-      } else console.warn("Live testimonies are unavailable.", liveResult.reason);
-      if (published.length) return published;
-      throw new Error("No testimonies are available.");
+    if (!window.ConnectHubContent) await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "/content.js";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
     });
+    stories = (await ConnectHubContent.list("testimony")).map((item) => ({
+      name: item.title || "", quote: item.quote || "", paragraphs: item.paragraphs || [], tags: item.tags || [],
+      image: { data: ConnectHubContent.safeUrl(item.imageUrl) }
+    }));
     if (!Array.isArray(stories)) throw new Error("Testimonies must contain an array.");
+    if (!stories.length) {
+      const loading = document.getElementById("storiesLoading");
+      if (loading) loading.textContent = "No stories are published yet.";
+      return;
+    }
   } catch (error) {
     console.error("Unable to load AI testimonies:", error);
     const loading = document.getElementById("storiesLoading");

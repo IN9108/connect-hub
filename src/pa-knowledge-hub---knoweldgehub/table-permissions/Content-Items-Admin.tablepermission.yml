@@ -1,0 +1,16 @@
+adx_accountrelationship:
+adx_append: false
+adx_appendto: false
+adx_contactrelationship:
+adx_create: true
+adx_delete: false
+adx_entitylogicalname: crd38_contentitem
+adx_entityname: Content Items Admin
+adx_entitypermission_webrole:
+- 751daad9-dcdc-4338-8a93-eb269826fab3
+adx_entitypermissionid: b102abb4-d432-42e8-b06b-72bbdcf04110
+adx_parententitypermission:
+adx_parentrelationship:
+adx_read: true
+adx_scope: 756150000
+adx_write: false

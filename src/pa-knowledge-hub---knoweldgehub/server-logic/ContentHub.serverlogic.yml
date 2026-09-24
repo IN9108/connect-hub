@@ -1,0 +1,7 @@
+adx_description: Returns published Connect Hub content only.
+adx_display_name: ContentHub
+adx_name: ContentHub
+adx_serverlogic_adx_webrole:
+- aaf12810-55a5-4d1f-9ab4-10046ac71c8d
+- 751daad9-dcdc-4338-8a93-eb269826fab3
+adx_serverlogicid: 94b01267-64b4-5435-a5e3-4c8483c1e123

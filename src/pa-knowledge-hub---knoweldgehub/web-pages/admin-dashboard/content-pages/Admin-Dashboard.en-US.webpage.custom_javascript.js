@@ -1,1249 +1,475 @@
-window.AdminHub = {
-  state: {
-    summaryStats: {
-      totalLearningJourneys: 0,
-      totalTrainingModules: 0,
-      testimoniesCount: 0,
-    },
-    learningPaths: [],
-    modules: [],
-    testimonies: [],
-    currentTab: "learningPaths", // "learningPaths" | "testimonies" | "modules"
-    selectedJourneyId: null,
-  },
-
-  /**
-   * Helper: Formats name into standard fallback image path (/first_last_img.jpg)
-   */
-  _buildFallbackImagePath(fullName = "") {
-    console.log(
-      "[AdminHub._buildFallbackImagePath] Computing fallback path for:",
-      fullName,
-    );
-    const parts = fullName.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (parts.length < 2) {
-      console.warn(
-        "[AdminHub._buildFallbackImagePath] Name has fewer than two parts. Returning empty fallback path.",
-      );
-      return "";
-    }
-    const path = `/${parts[0]}_${parts[parts.length - 1]}_img.jpg`;
-    console.log(
-      "[AdminHub._buildFallbackImagePath] Generated fallback path:",
-      path,
-    );
-    return path;
-  },
-
-  /**
-   * Helper: Resolves image path (custom or auto-generated fallback)
-   */
-  _getTestimonyImagePath(item = {}) {
-    console.log(
-      "[AdminHub._getTestimonyImagePath] Resolving photo path for item:",
-      item,
-    );
-    const customData = (
-      item?.crd38_imageurl ||
-      item?.image?.data ||
-      ""
-    ).trim();
-    if (customData) {
-      console.log(
-        "[AdminHub._getTestimonyImagePath] Found custom image data/path:",
-        customData,
-      );
-      return customData;
-    }
-    const fallback = this._buildFallbackImagePath(
-      item?.crd38_name || item?.name || "",
-    );
-    console.log(
-      "[AdminHub._getTestimonyImagePath] Using computed fallback path:",
-      fallback,
-    );
-    return fallback;
-  },
-
-  /**
-   * Helper: Computes initials from a full name
-   */
-  _getInitials(name = "") {
-    console.log("[AdminHub._getInitials] Computing initials for name:", name);
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return "?";
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    const initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    console.log("[AdminHub._getInitials] Computed initials:", initials);
-    return initials;
-  },
-
-  /**
-   * Wrapper to invoke the server-side logic endpoint (GET or POST)
-   */
-  async _callServer(action = "getAdminOverview", extraParams = "", payload = null) {
-    if (action === "getAdminOverview")
-      return ConnectHub.cache.get("admin:overview", () =>
-        this._requestServer(action, extraParams, payload));
-    const result = await this._requestServer(action, extraParams, payload);
-    ConnectHub.cache.invalidate("admin:overview");
-    ConnectHub.cache.invalidate("training:");
-    ConnectHub.cache.invalidate("testimonies");
-    return result;
-  },
-
-  async _requestServer(
-    action = "getAdminOverview",
-    extraParams = "",
-    payload = null,
-  ) {
-    const currentPath = window.location.pathname;
-    const url = `/_api/serverlogics/AdminHubMaster?action=${action}&currentPath=${encodeURIComponent(currentPath)}${extraParams}`;
-
-    console.log(
-      `[AdminHub._callServer] Executing API Call -> Action: ${action} | URL: ${url}`,
-      {
-        payload,
-        currentPath,
-      },
-    );
-
-    const headers = {
-      Accept: "application/json",
-      "OData-MaxVersion": "4.0",
-      "OData-Version": "4.0",
-      __RequestVerificationToken: await ConnectHub.getToken(),
-    };
-
-    const options = {
-      method: payload ? "POST" : "GET",
-      credentials: "same-origin",
-      cache: "no-store",
-      headers,
-    };
-
-    if (payload) {
-      headers["Content-Type"] = "application/json";
-      options.body = JSON.stringify(payload);
-    }
-
-    try {
-      const response = await fetch(url, options);
-      console.log(
-        `[AdminHub._callServer] HTTP Status Code: ${response.status} for action: ${action}`,
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Server request failed with status code ${response.status}`,
-        );
-      }
-
-      const envelope = await response.json();
-      console.log(
-        `[AdminHub._callServer] Envelope received for [${action}]:`,
-        envelope,
-      );
-
-      if (envelope.success === false) {
-        throw new Error(envelope.message || "Error executing server script.");
-      }
-
-      if (!envelope.data) {
-        console.warn(
-          `[AdminHub._callServer] Envelope data is missing or empty for [${action}].`,
-        );
-        return envelope;
-      }
-
-      // Inside window.AdminHub._callServer:
-      const parsedData =
-        typeof envelope.data === "string"
-          ? JSON.parse(envelope.data)
-          : envelope.data;
-
-      if (parsedData?.success === false)
-        throw new Error(parsedData.message || "Admin request failed.");
-
-      console.log(
-        `[AdminHub._callServer] Successfully parsed payload data for [${action}]:`,
-        parsedData,
-      );
-
-      return parsedData?.data || parsedData;
-    } catch (err) {
-      console.error(
-        `[AdminHub._callServer] Failed during execution of [${action}]:`,
-        err,
-      );
-      throw err;
-    }
-  },
-
-  /**
-   * Initializes data fetch from Dataverse server-side API
-   */
-  async init() {
-    console.log("[AdminHub.init] Initializing Admin Hub module...");
-    try {
-      const overviewData = await this._callServer("getAdminOverview");
-      console.log("[AdminHub.init] Raw Overview Data retrieved:", overviewData);
-
-      this.state = {
-        ...this.state,
-        summaryStats: {
-          ...overviewData?.summaryStats,
-          testimoniesCount: Array.isArray(overviewData?.testimonies)
-            ? overviewData.testimonies.length
-            : 0,
-        },
-        learningPaths: Array.isArray(overviewData?.learningPaths)
-          ? overviewData.learningPaths
-          : [],
-        modules: Array.isArray(overviewData?.modules)
-          ? overviewData.modules
-          : [],
-        testimonies: Array.isArray(overviewData?.testimonies)
-          ? overviewData.testimonies
-          : [],
-      };
-
-      console.log("[AdminHub.init] State successfully populated:", this.state);
-
-      this.renderStats();
-      this.renderRecentActivity();
-      this.setupModalEvents();
-      this.setupSidebarEvents();
-      this.setupDelegatedEvents(); // CSP-compliant event delegation listener
-
-      console.log("[AdminHub.init] Setup completed successfully.");
-    } catch (err) {
-      console.error("[AdminHub] Initialization failed:", err);
-      const notice = document.createElement("p");
-      notice.className = "loading-state";
-      notice.setAttribute("role", "alert");
-      notice.textContent = "Admin data could not load. Refresh the page or check your site access.";
-      document.querySelector(".admin-shell")?.prepend(notice);
-    }
-  },
-
-  /**
-   * CSP Fix: Single delegated event listener on body for rendered actions
-   */
-  setupDelegatedEvents() {
-    console.log(
-      "[AdminHub.setupDelegatedEvents] Registering delegated click and error listeners...",
-    );
-    document.body.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-action]");
-      if (!btn) return;
-
-      const action = btn.getAttribute("data-action");
-      const id = btn.getAttribute("data-id");
-      const type = btn.getAttribute("data-type");
-
-      console.log("[AdminHub.delegatedClick] Dynamic button clicked:", {
-        action,
-        id,
-        type,
-        target: btn,
-      });
-
-      switch (action) {
-        case "view-modules":
-          this.openJourneyModules(id);
-          break;
-        case "switch-tab":
-          this.switchTab(btn.getAttribute("data-tab"));
-          break;
-        case "edit":
-          this.editItem(type, id);
-          break;
-        case "delete":
-          this.deleteItem(type, id);
-          break;
-        case "close-edit-modal":
-          this._closeEditModal();
-          break;
-        default:
-          console.warn(
-            "[AdminHub.delegatedClick] Unhandled action attribute:",
-            action,
-          );
-      }
+(() => {
+  const start = () => {
+  "use strict";
+  const root = document.getElementById("adminHub");
+  if (!root) return;
+  const $ = (id) => document.getElementById(id);
+  const escape = (value) => ConnectHub.escapeHtml(value);
+  const kinds = [
+    ["learningPath", "Learning pathways"], ["module", "Training modules"],
+    ["prompt", "Prompts"], ["testimony", "Testimonies"],
+    ["agent", "Agents"], ["page", "Page content"]
+  ];
+  const kindName = (kind) => kinds.find(([key]) => key === kind)?.[1] || "Content";
+  const state = {items: [], learningPaths: [], kind: "all", item: null, draft: null, dirty: false, busy: false, images: [], imageTarget: null, pending: null};
+  const uuid = () => crypto.randomUUID();
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const displayName = (item) => item.name || item.draft?.title || item.draft?.name || "Untitled";
+  const isImported = () => !!state.draft?.templateKey;
+  const notice = (message, error = false) => { $("adminNotice").textContent = message; $("adminNotice").classList.toggle("is-error", error); };
+  const actionNotice = (message, label, callback, error = false) => {
+    notice(message, error);
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "admin-button"; button.textContent = label;
+    button.addEventListener("click", callback);
+    $("adminNotice").append(" ", button);
+  };
+  const setBusy = (busy) => {
+    state.busy = busy; root.classList.toggle("admin-busy", busy);
+    root.querySelectorAll("button,input,select,textarea").forEach((control) => {
+      if (busy) { control.dataset.wasDisabled = control.disabled ? "1" : "0"; control.disabled = true; }
+      else if (control.dataset.wasDisabled !== undefined) { control.disabled = control.dataset.wasDisabled === "1"; delete control.dataset.wasDisabled; }
     });
-
-    // Image fallback handling using delegation for dynamic admin cards
-    document.body.addEventListener(
-      "error",
-      (e) => {
-        if (e.target && e.target.classList.contains("admin-avatar-img")) {
-          const img = e.target;
-          console.warn(
-            "[AdminHub.imageError] Avatar image failed to load:",
-            img.src,
-          );
-          const parent = img.closest(".admin-avatar-thumb");
-          if (parent) {
-            const initials = img.getAttribute("data-initials") || "?";
-            console.log(
-              `[AdminHub.imageError] Replacing image with fallback initials: (${initials})`,
-            );
-            parent.classList.add("image-failed");
-            parent.innerHTML = `<span>${initials}</span>`;
+    $("adminForm").inert = busy || !!state.pending || !!state.retry;
+  };
+  const pendingKey = () => window.currentContactId ? `connecthub:v1:${window.currentContactId}:adminHubPending` : null;
+  const markDirty = () => { state.dirty = true; updateStatus(); };
+  const setPath = (object, path, value) => {
+    const parts = path.split("."); let target = object;
+    while (parts.length > 1) { const key = parts.shift(); target[key] ??= /^\d+$/.test(parts[0]) ? [] : {}; target = target[key]; }
+    target[parts[0]] = value;
+  };
+  const request = async (action, body, params = {}) => {
+    const url = new URL("/_api/serverlogics/AdminHubMaster", location.origin);
+    url.searchParams.set("action", action);
+    url.searchParams.set("currentPath", location.pathname);
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+    let response;
+    try { response = await fetch(url, {
+      method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store",
+      headers: {"Accept": "application/json", "OData-MaxVersion": "4.0", "OData-Version": "4.0",
+        "__RequestVerificationToken": await ConnectHub.getToken(), ...(body === undefined ? {} : {"Content-Type": "application/json"})},
+      ...(body === undefined ? {} : {body: JSON.stringify(body)})
+    }); } catch (error) { error.ambiguous = body !== undefined; throw error; }
+    let envelope;
+    try { envelope = await response.json(); }
+    catch (error) { error.ambiguous = body !== undefined && response.ok; throw error; }
+    let parsed;
+    try { parsed = typeof envelope.data === "string" ? JSON.parse(envelope.data) : envelope.data; }
+    catch (error) { error.ambiguous = body !== undefined && response.ok; throw error; }
+    if (!response.ok || envelope.success !== true || parsed?.success === false) {
+      const error = new Error(parsed?.message || envelope.message || `Request failed (${response.status}).`);
+      error.conflict = response.status === 409 || /conflict|revision|stale/i.test(error.message);
+      throw error;
+    }
+    return parsed?.data ?? parsed ?? envelope;
+  };
+  const rememberPending = (pending) => {
+    state.pending = pending;
+    const key = pendingKey();
+    if (key) try {
+      if (pending) sessionStorage.setItem(key, JSON.stringify(pending));
+      else sessionStorage.removeItem(key);
+    } catch (_) {}
+  };
+  async function finishOperation(pending) {
+    rememberPending(pending);
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const operation = await request("operation", undefined, {id: pending.operationId});
+      if (operation.status === "succeeded") {
+        rememberPending(null);
+        await loadList();
+        if (pending.action === "uploadMedia") {
+          const url = operation.url || operation.pageUrl;
+          if (url) {
+            state.images.unshift({url, alt: pending.alt});
+            if (state.draft && state.imageTarget) { setPath(state.draft, state.imageTarget, url); markDirty(); renderEditor(); }
+            renderImages();
           }
+          notice(url ? "Image uploaded. Select it to use it in your content." : "Image uploaded.");
+        } else {
+          const id = operation.itemId || pending.itemId;
+          if (id) await openItem(id, true);
+          notice(pending.action === "saveContent" ? "Draft saved." : pending.action === "publishContent" ? "Content published." : "Content unpublished.");
         }
-      },
-      true, // Capturing phase needed for error event listener delegation
-    );
-  },
-
-  /**
-   * Setup click handling for open buttons and modal closing
-   */
-  setupModalEvents() {
-    console.log(
-      "[AdminHub.setupModalEvents] Setting up workspace modal listeners...",
-    );
-    document.querySelectorAll("[data-modal-type]").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const type = e.currentTarget.getAttribute("data-modal-type");
-        console.log(
-          "[AdminHub.modalEvent] Open modal triggered for type:",
-          type,
-        );
-        this.openModal(type);
-      });
-    });
-
-    document.querySelectorAll("[data-close-modal]").forEach((el) => {
-      el.addEventListener("click", () => {
-        console.log("[AdminHub.modalEvent] Close workspace modal triggered.");
-        this.closeModal();
-      });
-    });
-
-    document.addEventListener("keydown", (event) => {
-      const edit = document.getElementById("visualEditModal");
-      const workspace = document.getElementById("adminModal");
-      const openModal = edit?.classList.contains("is-open") ? edit
-        : workspace?.classList.contains("is-open") ? workspace : null;
-      if (event.key === "Tab" && openModal) {
-        const focusable = [...openModal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])')];
-        const first = focusable[0], last = focusable[focusable.length - 1];
-        if (!openModal.contains(document.activeElement)) {
-          event.preventDefault(); first?.focus();
-        } else if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault(); last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault(); first?.focus();
-        }
+        return true;
       }
-      if (event.key !== "Escape") return;
-      if (edit?.classList.contains("is-open"))
-        this._closeEditModal();
-      else if (workspace?.classList.contains("is-open"))
-        this.closeModal();
-    });
-
-    document.getElementById("workspaceCreateBtn")?.addEventListener("click", () =>
-      this.handleCreateNew());
-
-    const searchInput = document.getElementById("workspaceSearch");
-    if (searchInput) {
-      searchInput.addEventListener("input", (e) => {
-        console.log(
-          "[AdminHub.workspaceSearch] Filtering items by query:",
-          e.target.value,
-        );
-        this.filterWorkspaceItems(e.target.value);
-      });
-    } else {
-      console.warn(
-        "[AdminHub.setupModalEvents] Search element '#workspaceSearch' not found in DOM.",
-      );
-    }
-  },
-
-  /**
-   * Setup sidebar tab navigation listeners
-   */
-  setupSidebarEvents() {
-    console.log(
-      "[AdminHub.setupSidebarEvents] Attaching sidebar navigation listeners...",
-    );
-    document.querySelectorAll(".admin-sidebar [data-nav]").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const tab = e.currentTarget.getAttribute("data-nav");
-        console.log("[AdminHub.sidebarNavigation] Navigating to tab:", tab);
-        this.switchTab(tab);
-      });
-    });
-
-    const createBtn = document.getElementById("sidebarActionCreate");
-    if (createBtn) {
-      createBtn.addEventListener("click", () => {
-        console.log("[AdminHub.sidebarAction] 'Create New' clicked.");
-        this.handleCreateNew();
-      });
-    } else {
-      console.warn(
-        "[AdminHub.setupSidebarEvents] Create button '#sidebarActionCreate' not found.",
-      );
-    }
-  },
-
-  switchTab(tab) {
-    console.log(
-      `[AdminHub.switchTab] Switching active workspace tab to: [${tab}]`,
-    );
-    this.state.currentTab = tab;
-    if (tab !== "modules") {
-      console.log(
-        "[AdminHub.switchTab] Resetting selectedJourneyId state to null.",
-      );
-      this.state.selectedJourneyId = null;
-    }
-
-    document.querySelectorAll(".admin-sidebar [data-nav]").forEach((btn) => {
-      if (btn.getAttribute("data-nav") === tab) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
+      if (operation.status === "failed") {
+        rememberPending(null);
+        throw new Error(operation.message || "The operation failed. Your draft is still here.");
       }
-    });
-
-    this.renderCurrentWorkspaceView();
-  },
-
-  /**
-   * Modal management renderer
-   */
-  openModal(type = "learningPaths") {
-    console.log("[AdminHub.openModal] Opening workspace modal for type:", type);
-    const modal = document.getElementById("adminModal");
-    if (!modal) {
-      console.error(
-        "[AdminHub.openModal] Workspace modal '#adminModal' not found.",
-      );
-      return;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
-
-    this._workspacePreviousFocus = document.activeElement;
-    this.switchTab(type);
-
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
-    modal.querySelector("#workspaceSearch")?.focus();
-  },
-
-  closeModal() {
-    console.log("[AdminHub.closeModal] Closing workspace modal.");
-    const modal = document.getElementById("adminModal");
-    if (!modal) return;
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-    this._workspacePreviousFocus?.focus?.();
-  },
-
-  renderCurrentWorkspaceView() {
-    console.log(
-      `[AdminHub.renderCurrentWorkspaceView] Rendering view for tab: [${this.state.currentTab}]`,
-    );
-    const titleEl = document.getElementById("modalTitle");
-    const subtitleEl = document.getElementById("modalSubtitle");
-    const badgeEl = document.getElementById("workspaceType");
-    const bodyEl = document.getElementById("modalBody");
-    const totalCountEl = document.getElementById("workspaceTotalCount");
-
-    if (!bodyEl) {
-      console.error(
-        "[AdminHub.renderCurrentWorkspaceView] '#modalBody' element is missing.",
-      );
-      return;
+    actionNotice("Still working. Check the result before trying again.", "Check progress", () => resumePending());
+    return false;
+  }
+  async function resumePending() {
+    if (!state.pending || state.busy) return;
+    setBusy(true);
+    try { await finishOperation(state.pending); }
+    catch (error) {
+      if (state.pending) actionNotice(error.message, "Check progress", () => resumePending(), true);
+      else notice(error.message, true);
     }
-
-    if (this.state.currentTab === "learningPaths") {
-      if (titleEl) titleEl.textContent = "Learning Journeys";
-      if (subtitleEl)
-        subtitleEl.textContent =
-          "Select a journey to view and manage its training modules.";
-      if (badgeEl) badgeEl.textContent = "Learning Management";
-      if (totalCountEl)
-        totalCountEl.textContent = this.state.learningPaths.length;
-
-      bodyEl.innerHTML = this._renderPathsTable();
-    } else if (this.state.currentTab === "modules") {
-      const journey = this.state.learningPaths.find(
-        (lp) =>
-          (lp.crd38_learningpathid || lp.id) === this.state.selectedJourneyId,
-      );
-      const journeyName = journey
-        ? journey.crd38_name || "Journey"
-        : "All Journeys";
-      const filteredModules = this._getModulesForSelectedJourney();
-
-      console.log(
-        "[AdminHub.renderCurrentWorkspaceView] Selected Journey for modules view:",
-        {
-          selectedJourneyId: this.state.selectedJourneyId,
-          journeyName,
-          totalFilteredModules: filteredModules.length,
-        },
-      );
-
-      if (titleEl) titleEl.textContent = `${journeyName} — Modules`;
-      if (subtitleEl)
-        subtitleEl.textContent = `Managing training modules under "${journeyName}".`;
-      if (badgeEl) badgeEl.textContent = "Module Management";
-      if (totalCountEl) totalCountEl.textContent = filteredModules.length;
-
-      bodyEl.innerHTML = this._renderModulesTable(filteredModules, journeyName);
-    } else if (this.state.currentTab === "testimonies") {
-      if (titleEl) titleEl.textContent = "Manage AI Testimonies";
-      if (subtitleEl)
-        subtitleEl.textContent =
-          "Review and edit social proof and user feedback.";
-      if (badgeEl) badgeEl.textContent = "Content Management";
-      if (totalCountEl)
-        totalCountEl.textContent = this.state.testimonies.length;
-
-      bodyEl.innerHTML = this._renderTestimoniesTable();
-    }
-  },
-
-  _getModulesForSelectedJourney() {
-    console.log(
-      "[AdminHub._getModulesForSelectedJourney] Filtering modules for target journey ID:",
-      this.state.selectedJourneyId,
-    );
-    if (!this.state.selectedJourneyId) return this.state.modules;
-    const filtered = this.state.modules.filter(
-      (m) =>
-        m._crd38_learningpathref_value === this.state.selectedJourneyId ||
-        m.crd38_learningpathid === this.state.selectedJourneyId ||
-        m.learningPathId === this.state.selectedJourneyId,
-    );
-    console.log(
-      "[AdminHub._getModulesForSelectedJourney] Filtered result set count:",
-      filtered.length,
-    );
-    return filtered;
-  },
-
-  openJourneyModules(journeyId) {
-    console.log(
-      "[AdminHub.openJourneyModules] Opening modules for journey ID:",
-      journeyId,
-    );
-    this.state.selectedJourneyId = journeyId;
-    this.state.currentTab = "modules";
-    this.renderCurrentWorkspaceView();
-  },
-
-  filterWorkspaceItems(query) {
-    const q = query.toLowerCase().trim();
-    console.log(
-      "[AdminHub.filterWorkspaceItems] Searching workspace cards for matching query string:",
-      q,
-    );
-    const cards = document.querySelectorAll("#modalBody .admin-object-card");
-
-    let visibleCount = 0;
-    cards.forEach((card) => {
-      const text = card.textContent.toLowerCase();
-      if (!q || text.includes(q)) {
-        card.style.display = "";
-        visibleCount++;
-      } else {
-        card.style.display = "none";
-      }
-    });
-
-    console.log(
-      `[AdminHub.filterWorkspaceItems] Search complete. Showing ${visibleCount}/${cards.length} cards.`,
-    );
-  },
-
-  /* Card Grid Generators */
-
-  _renderPathsTable() {
-    console.log(
-      "[AdminHub._renderPathsTable] Generating HTML cards for Learning Paths. Count:",
-      this.state.learningPaths.length,
-    );
-    if (!this.state.learningPaths.length) {
-      return `<div class="empty-state"><p>No learning journeys found.</p></div>`;
-    }
-
-    return this.state.learningPaths
-      .map((lp) => {
-        const id = lp.crd38_learningpathid || lp.id || "";
-        const moduleCount = this.state.modules.filter(
-          (m) =>
-            m._crd38_learningpathref_value === id ||
-            m.crd38_learningpathid === id ||
-            m.learningPathId === id,
-        ).length;
-
-        return `
-        <article class="admin-object-card" data-id="${id}">
-          <div class="admin-object-top">
-            <span class="admin-object-type green">
-              <i class="fi fi-rr-route"></i>
-              Learning Journey
-            </span>
-            <button class="admin-object-menu-btn" aria-label="Options">
-              <i class="fi fi-rr-menu-dots"></i>
-            </button>
-          </div>
-
-          <div class="admin-object-content">
-            <h3>${this._escapeHtml(lp.crd38_name || "Untitled")}</h3>
-            <p>${this._escapeHtml(lp.crd38_description || "No description provided.")}</p>
-          </div>
-
-          <div class="admin-object-meta">
-            <span>
-              <i class="fi fi-rr-sort"></i>
-              Order: ${lp.crd38_displayorder ?? "-"}
-            </span>
-            <span>
-              <i class="fi fi-rr-book-alt"></i>
-              ${moduleCount} Modules
-            </span>
-          </div>
-
-          <div class="admin-object-actions">
-            <button class="object-btn view-modules" data-action="view-modules" data-id="${id}">
-              <i class="fi fi-rr-eye"></i> View Modules
-            </button>
-            <button class="object-btn edit" data-action="edit" data-type="learningPath" data-id="${id}">
-              <i class="fi fi-rr-pencil"></i> Edit
-            </button>
-            <button class="object-btn delete" data-action="delete" data-type="learningPath" data-id="${id}">
-              <i class="fi fi-rr-trash"></i> Delete
-            </button>
-          </div>
-        </article>
-      `;
-      })
-      .join("");
-  },
-
-  _renderModulesTable(modulesList = [], journeyName = "") {
-    console.log(
-      `[AdminHub._renderModulesTable] Generating HTML cards for modules under '${journeyName}'. Count:`,
-      modulesList.length,
-    );
-    const backBar = `
-      <div class="workspace-back-bar">
-        <button class="object-btn" data-action="switch-tab" data-tab="learningPaths">
-          <i class="fi fi-rr-arrow-left"></i> Back to Journeys
-        </button>
-      </div>
-    `;
-
-    if (!modulesList.length) {
-      return `${backBar}<div class="empty-state full-width"><p>No modules found for ${this._escapeHtml(journeyName)}.</p></div>`;
-    }
-
-    return (
-      backBar +
-      modulesList
-        .map((m) => {
-          const moduleId =
-            m.crd38_trainingmoduleid || m.id || "";
-          return `
-        <article class="admin-object-card" data-id="${moduleId}">
-          <div class="admin-object-top">
-            <span class="admin-object-type cyan">
-              <i class="fi fi-rr-e-learning"></i>
-              Module
-            </span>
-            <button class="admin-object-menu-btn" aria-label="Options">
-              <i class="fi fi-rr-menu-dots"></i>
-            </button>
-          </div>
-
-          <div class="admin-object-content">
-            <h3>${this._escapeHtml(m.crd38_name || "Untitled Module")}</h3>
-            <p>${this._escapeHtml(m.crd38_description || "No description available.")}</p>
-          </div>
-
-          <div class="admin-object-tags">
-            ${
-              m.crd38_required
-                ? '<span class="admin-tag required">Required</span>'
-                : '<span class="admin-tag">Optional</span>'
-            }
-            <span class="admin-tag">Order ${m.crd38_displayorder ?? "-"}</span>
-          </div>
-
-          <div class="admin-object-actions">
-            <button class="object-btn edit" data-action="edit" data-type="module" data-id="${moduleId}">
-              <i class="fi fi-rr-pencil"></i> Edit
-            </button>
-            <button class="object-btn delete" data-action="delete" data-type="module" data-id="${moduleId}">
-              <i class="fi fi-rr-trash"></i> Delete
-            </button>
-          </div>
-        </article>
-      `;
-        })
-        .join("")
-    );
-  },
-
-  _renderTestimoniesTable() {
-    console.log(
-      "[AdminHub._renderTestimoniesTable] Generating HTML cards for AI Testimonies. Count:",
-      this.state.testimonies.length,
-    );
-    if (!this.state.testimonies.length) {
-      return `<div class="empty-state"><p>No testimonies found.</p></div>`;
-    }
-
-    return this.state.testimonies
-      .map((item) => {
-        const id = item.crd38_aitestimonyid || item.id || "";
-        const name = item.crd38_name || item.name || "Anonymous";
-        const quote = item.crd38_quote || item.quote || "";
-        const initials = this._getInitials(name);
-        const imgPath = this._getTestimonyImagePath(item);
-
-        const avatarMarkup = imgPath
-          ? `<div class="admin-avatar-thumb">
-               <img src="${this._escapeHtml(imgPath)}" alt="${this._escapeHtml(name)}" class="admin-avatar-img" data-initials="${initials}" />
-             </div>`
-          : `<div class="admin-avatar-thumb image-failed">
-               <span>${initials}</span>
-             </div>`;
-
-        const tagsList =
-          typeof item.crd38_tags === "string"
-            ? item.crd38_tags.split(",").map((t) => t.trim())
-            : Array.isArray(item.tags)
-              ? item.tags
-              : [];
-
-        return `
-        <article class="admin-object-card testimony-card" data-id="${this._escapeHtml(id)}">
-          <div class="admin-object-top">
-            <span class="admin-object-type purple">
-              <i class="fi fi-rr-quote-right"></i>
-              AI Testimony
-            </span>
-          </div>
-
-          <div class="admin-testimony-header">
-            ${avatarMarkup}
-            <div>
-              <h3>${this._escapeHtml(name)}</h3>
-              <span class="admin-photo-path-badge">${this._escapeHtml(imgPath)}</span>
-            </div>
-          </div>
-
-          <div class="admin-object-content">
-            <blockquote>"${this._escapeHtml(quote)}"</blockquote>
-          </div>
-
-          <div class="admin-object-tags">
-            ${tagsList
-              .map(
-                (tag) =>
-                  `<span class="admin-tag">${this._escapeHtml(tag)}</span>`,
-              )
-              .join("")}
-          </div>
-
-          <div class="admin-object-actions">
-            <button class="object-btn edit" data-action="edit" data-type="testimony" data-id="${this._escapeHtml(id)}">
-              <i class="fi fi-rr-pencil"></i> Edit
-            </button>
-            <button class="object-btn delete" data-action="delete" data-type="testimony" data-id="${this._escapeHtml(id)}">
-              <i class="fi fi-rr-trash"></i> Delete
-            </button>
-          </div>
-        </article>
-      `;
-      })
-      .join("");
-  },
-
-  renderStats() {
-    console.log(
-      "[AdminHub.renderStats] Rendering summary statistics elements...",
-      this.state.summaryStats,
-    );
-    const { summaryStats } = this.state;
-    if (!summaryStats) {
-      console.warn("[AdminHub.renderStats] summaryStats is undefined.");
-      return;
-    }
-
-    const statCards = document.querySelectorAll(".dashboard-stats .stat-card");
-
-    statCards.forEach((card) => {
-      const label = card
-        .querySelector(".stat-label")
-        ?.textContent?.trim()
-        .toLowerCase();
-      const numberEl = card.querySelector(".stat-number");
-
-      if (!numberEl || !label) return;
-
-      if (label.includes("learning journey")) {
-        numberEl.textContent = summaryStats.totalLearningJourneys ?? 0;
-      } else if (label.includes("training module")) {
-        numberEl.textContent = summaryStats.totalTrainingModules ?? 0;
-      } else if (label.includes("testimonies") || label.includes("testimony")) {
-        numberEl.textContent = summaryStats.testimoniesCount ?? 0;
-      }
-    });
-  },
-
-  renderRecentActivity() {
-    console.log(
-      "[AdminHub.renderRecentActivity] Generating recent activity feed...",
-    );
-    const container = document.getElementById("recentActivity");
-    if (!container) {
-      console.warn(
-        "[AdminHub.renderRecentActivity] Recent activity container '#recentActivity' not found.",
-      );
-      return;
-    }
-
-    const learningPaths = this.state.learningPaths || [];
-    const modules = this.state.modules || [];
-
-    const allItems = [
-      ...learningPaths.map((lp) => ({
-        title: "Learning Journey",
-        subtitle: lp.crd38_name || "Untitled Journey",
-        date: lp.createdon ? new Date(lp.createdon) : new Date(),
-      })),
-      ...modules.map((m) => ({
-        title: "Training Module",
-        subtitle: m.crd38_name || "Untitled Module",
-        date: m.createdon ? new Date(m.createdon) : new Date(),
-      })),
-    ];
-
-    allItems.sort((a, b) => b.date - a.date);
-    const recent = allItems.slice(0, 5);
-
-    console.log(
-      "[AdminHub.renderRecentActivity] Sorted recent items count:",
-      recent.length,
-    );
-    if (recent.length === 0) return;
-
-    container.innerHTML = recent
-      .map(
-        (item) => `
-        <div class="learning-item">
-          <div>
-            <div class="learning-item-title">${item.title}</div>
-            <div class="learning-item-subtitle">${this._escapeHtml(item.subtitle)}</div>
-          </div>
-          <div class="learning-item-status">${this._formatRelativeDate(item.date)}</div>
-        </div>
-      `,
-      )
-      .join("");
-  },
-
-  _formatRelativeDate(date) {
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    return `${diffDays} days ago`;
-  },
-
-  _escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  },
-
-  /* Visual Actions */
-
-  handleCreateNew() {
-    const type = {
-      learningPaths: "learningPath",
-      modules: "module",
-      testimonies: "testimony",
-    }[this.state.currentTab];
-    if (type) this._showEditModal(type, {}, null);
-  },
-
-  editItem(type, id) {
-    console.log(
-      `[AdminHub.editItem] Initiating edit for type [${type}] with ID [${id}]`,
-    );
-    let itemData = null;
-
-    if (type === "learningPath") {
-      itemData = this.state.learningPaths.find(
-        (p) => (p.crd38_learningpathid || p.id) === id,
-      );
-    } else if (type === "module") {
-      itemData = this.state.modules.find(
-        (m) => (m.crd38_trainingmoduleid || m.id) === id,
-      );
-    } else if (type === "testimony") {
-      itemData = this.state.testimonies.find(
-        (t) => (t.crd38_aitestimonyid || t.id) === id,
-      );
-    }
-
-    console.log("[AdminHub.editItem] Target item data matched:", itemData);
-    this._showEditModal(type, itemData || {}, id);
-  },
-
-  async deleteItem(type, id) {
-    console.log(
-      `[AdminHub.deleteItem] Delete requested for type [${type}] with ID [${id}]`,
-    );
-    const confirmDelete = confirm(
-      `Are you sure you want to delete this ${type}?`,
-    );
-    if (!confirmDelete) {
-      console.log(
-        "[AdminHub.deleteItem] User cancelled deletion confirmation.",
-      );
-      return;
-    }
-
+    finally { setBusy(false); }
+  }
+  async function submitOperation(action, body) {
+    if (state.pending) { notice("An operation is still running. Check its progress first.", true); return false; }
+    if (state.retry) { actionNotice("Resolve the earlier request before starting another.", "Retry request", () => retryRequest(), true); return false; }
+    const pending = {action, itemId: body.id, alt: body.alt, requestId: uuid()};
+    body.requestId = pending.requestId;
+    setBusy(true); notice("Working…");
     try {
-      const deletePayload = {
-        entityType: type,
-        id: id,
-      };
-
-      console.log(
-        "[AdminHub.deleteItem] Sending server request to delete record:",
-        deletePayload,
-      );
-      await this._callServer("deleteData", "", deletePayload);
-
-      console.log(
-        "[AdminHub.deleteItem] Record deleted successfully. Fetching refreshed overview data...",
-      );
-      const freshData = await this._callServer("getAdminOverview");
-
-      this.state.learningPaths = freshData.learningPaths || [];
-      this.state.modules = freshData.modules || [];
-      this.state.testimonies = freshData.testimonies || [];
-
-      if (freshData.summaryStats) {
-        this.state.summaryStats = {
-          ...freshData.summaryStats,
-          testimoniesCount: this.state.testimonies.length,
-        };
+      const result = await request(action, body);
+      state.retry = null;
+      if (!result.operationId) { const error = new Error("The server did not return an operation to track."); error.ambiguous = true; throw error; }
+      pending.operationId = result.operationId;
+      pending.itemId = result.itemId || pending.itemId;
+      return await finishOperation(pending);
+    } catch (error) {
+      // A network failure after submission is ambiguous. Keep the same request ID for a safe retry.
+      if (!pending.operationId && error.ambiguous) {
+        state.retry = {action, body};
+        actionNotice(`${error.message} Your changes are still here. Retry uses the same request.`, "Retry request", () => retryRequest(), true);
+      } else if (state.pending) actionNotice(error.message, "Check progress", () => resumePending(), true);
+      else if (error.conflict && body.id && action !== "uploadMedia") actionNotice(error.message, "Reload latest", async () => {
+        if (confirm("Reload the latest version? Unsaved changes in this editor will be lost.")) await openItem(body.id, true);
+      }, true);
+      else notice(error.message, true);
+      return false;
+    } finally { setBusy(false); }
+  }
+  async function retryRequest() {
+    if (!state.retry || state.busy || state.pending) return;
+    const {action, body} = state.retry;
+    setBusy(true); notice("Checking the original request…");
+    try {
+      const result = await request(action, body);
+      if (!result.operationId) { const error = new Error("The server did not return an operation to track."); error.ambiguous = true; throw error; }
+      state.retry = null;
+      await finishOperation({action, itemId: result.itemId || body.id, alt: body.alt, requestId: body.requestId, operationId: result.operationId});
+    } catch (error) {
+      if (state.pending) actionNotice(error.message, "Check progress", () => resumePending(), true);
+      else if (error.ambiguous) actionNotice(error.message, "Retry request", () => retryRequest(), true);
+      else {
+        state.retry = null;
+        if (error.conflict && body.id && action !== "uploadMedia") actionNotice(error.message, "Reload latest", async () => {
+          if (confirm("Reload the latest version? Unsaved changes in this editor will be lost.")) await openItem(body.id, true);
+        }, true);
+        else notice(error.message, true);
       }
-
-      console.log(
-        "[AdminHub.deleteItem] State re-synchronized following deletion:",
-        this.state,
-      );
-
-      this.renderStats();
-      this.renderCurrentWorkspaceView();
-    } catch (err) {
-      console.error("[AdminHub.deleteItem] Delete process failed:", err);
-      alert("Failed to delete record: " + err.message);
+    } finally { setBusy(false); }
+  }
+  async function loadList() {
+    const data = await request("listContent");
+    state.items = Array.isArray(data.items) ? data.items : [];
+    state.learningPaths = Array.isArray(data.learningPaths) ? data.learningPaths : [];
+    $("adminImport").hidden = !data.importNeeded;
+    renderList();
+    renderImages();
+  }
+  function renderNav() {
+    $("adminNav").innerHTML = [["all", "All content"], ...kinds, ["images", "Images"]].map(([key, name]) =>
+      `<button type="button" data-kind="${key}" ${state.kind === key ? 'aria-current="page"' : ""}>${name}</button>`).join("");
+  }
+  function renderList() {
+    $("adminListTitle").textContent = state.kind === "all" ? "All content" : kindName(state.kind);
+    const query = $("adminSearch").value.trim().toLowerCase();
+    const filter = $("adminStatusFilter").value;
+    const items = state.items.filter((item) =>
+      kinds.some(([key]) => key === item.kind) &&
+      (state.kind === "all" || item.kind === state.kind) &&
+      (filter === "all" || item.status === filter) &&
+      (!query || `${displayName(item)} ${item.draft?.description || ""}`.toLowerCase().includes(query)));
+    $("adminItems").innerHTML = items.length ? items.map((item) => `<article class="admin-item">
+      <div><h3>${escape(displayName(item))}</h3><p>${escape(item.draft?.description || "")}</p>
+      <div class="admin-item-meta"><span class="admin-pill">${escape(kindName(item.kind))}</span><span class="admin-pill ${item.published ? "is-published" : ""}">${escape(item.status || "Draft")}</span>${item.published && window.ConnectHubContent?.safeUrl(item.pageUrl) ? `<a class="admin-pill admin-page-link" href="${escape(item.pageUrl)}" target="_blank" rel="noopener">View page</a>` : ""}</div></div>
+      <button type="button" class="admin-button" data-open="${escape(item.id)}">Edit</button></article>`).join("")
+      : '<div class="admin-empty">No content matches these filters.</div>';
+  }
+  function show(view) {
+    ["List", "Editor", "Images"].forEach((name) => { $("admin" + name + "View").hidden = name.toLowerCase() !== view; });
+    $("adminMain").focus();
+  }
+  function canLeave() { return !state.dirty || confirm("Leave this draft? Your unsaved changes will be lost."); }
+  function selectKind(kind) {
+    if (kind !== "images" && !canLeave()) return;
+    state.kind = kind; renderNav();
+    if (kind === "images") { state.imageTarget = null; renderImages(); show("images"); }
+    else { if (state.dirty) state.dirty = false; renderList(); show("list"); }
+  }
+  async function openItem(id, force = false) {
+    if (!force && !canLeave()) return;
+    const item = await request("getContent", undefined, {id});
+    state.item = item;
+    state.draft = clone(item.draft || {});
+    state.dirty = false;
+    state.kind = item.kind;
+    renderNav(); renderEditor(); show("editor");
+  }
+  function newItem(kind = "learningPath") {
+    if (!canLeave()) return;
+    state.item = {id: uuid(), kind, revision: 0, status: "draft", published: false};
+    state.draft = {title: "", description: "", sections: []};
+    state.dirty = true; state.kind = kind;
+    renderNav(); renderEditor(); show("editor");
+    $("adminForm").querySelector("input,textarea")?.focus();
+  }
+  function updateStatus() {
+    const item = state.item;
+    if (!item) return;
+    const status = $("adminEditorStatus");
+    status.textContent = `${kindName(item.kind)} · ${item.status || "Draft"}${state.dirty ? " · Unsaved changes" : ""}`;
+    if (item.published && window.ConnectHubContent?.safeUrl(item.pageUrl)) {
+      const link = document.createElement("a"); link.href = item.pageUrl; link.target = "_blank"; link.rel = "noopener"; link.textContent = "View page";
+      status.append(" · ", link);
     }
-  },
-
-  _showEditModal(type, item, recordId) {
-    this._previousFocus = document.activeElement;
-    const typeLabel = { learningPath: "learning journey", module: "training module", testimony: "AI testimony" }[type] || type;
-    console.log(
-      `[AdminHub._showEditModal] Rendering Edit Modal for entity: ${type}, ID: ${recordId}`,
-    );
-    let modalOverlay = document.getElementById("visualEditModal");
-
-    if (!modalOverlay) {
-      console.log(
-        "[AdminHub._showEditModal] Modal overlay missing from DOM. Injecting new '#visualEditModal' element.",
-      );
-      modalOverlay = document.createElement("div");
-      modalOverlay.id = "visualEditModal";
-      modalOverlay.className = "edit-modal-overlay";
-      document.body.appendChild(modalOverlay);
+    $("adminEditorTitle").textContent = state.draft?.title || displayName(item);
+    $("adminPublishHint").textContent = state.dirty ? "Save your changes before publishing." : item.published ? "Changes to this draft are not live until you publish." : "Publish when the draft is ready.";
+    $("adminDuplicate").hidden = item.revision === 0;
+    $("adminUnpublish").hidden = !item.published;
+    $("adminPublish").hidden = item.published && item.publishedRevision === item.revision;
+  }
+  const input = (path, label, value = "", options = {}) => {
+    const id = `field-${path.replace(/[^a-z0-9]/gi, "-")}`;
+    const val = escape(value ?? "");
+    if (options.checkbox) return `<div class="admin-field ${options.full ? "full" : ""}"><label class="admin-check" for="${id}"><input id="${id}" type="checkbox" data-path="${escape(path)}" ${value ? "checked" : ""}> ${escape(label)}</label></div>`;
+    const control = options.select ? `<select id="${id}" data-path="${escape(path)}">${options.select.map(([key, text]) => `<option value="${escape(key)}" ${key === value ? "selected" : ""}>${escape(text)}</option>`).join("")}</select>`
+      : options.rows ? `<textarea id="${id}" data-path="${escape(path)}" rows="${options.rows}">${val}</textarea>`
+      : `<input id="${id}" data-path="${escape(path)}" type="${options.type || "text"}" value="${val}" ${options.required ? "required" : ""} ${options.readonly ? "readonly" : ""}>`;
+    return `<div class="admin-field ${options.full ? "full" : ""}"><label for="${id}">${escape(label)}</label>${control}${options.help ? `<small>${escape(options.help)}</small>` : ""}${options.image ? `<button type="button" class="admin-button" data-image-target="${escape(path)}">Choose from images</button>` : ""}</div>`;
+  };
+  const lines = (path, label, value, help) => input(path, label, (value || []).join("\n"), {rows: 4, full: true, help});
+  const sectionTypes = [["text", "Text"], ["callout", "Callout"], ["cards", "Cards"], ["steps", "Steps"], ["image", "Image"], ["quiz", "Quiz"]];
+  function sectionEditor(section, index) {
+    const base = `sections.${index}`;
+    let fields = input(`${base}.type`, "Section type", section.type || "text", {select: sectionTypes}) +
+      input(`${base}.title`, "Heading", section.title || "", {full: true});
+    if (["text", "callout", "image"].includes(section.type)) fields += input(`${base}.body`, "Text", section.body || "", {rows: 5, full: true});
+    if (section.type === "image") fields += input(`${base}.url`, "Image", section.url || "", {image: true}) + input(`${base}.alt`, "Image description", section.alt || "");
+    if (["cards", "steps"].includes(section.type)) {
+      fields += `<div class="admin-field full"><label>Items</label><div class="admin-repeat">${(section.items || []).map((entry, j) =>
+        `<div class="admin-section-card"><div class="admin-section-card-head"><strong>Item ${j + 1}</strong><button type="button" class="admin-button" data-remove-item="${index}:${j}">Remove</button></div><div class="admin-section-fields">${input(`${base}.items.${j}.title`, "Title", entry.title)}${input(`${base}.items.${j}.body`, "Text", entry.body, {rows: 3})}</div></div>`).join("")}</div><button type="button" class="admin-button" data-add-item="${index}">Add item</button></div>`;
     }
-    modalOverlay.setAttribute("role", "dialog");
-    modalOverlay.setAttribute("aria-modal", "true");
-    modalOverlay.setAttribute("aria-labelledby", "editModalTitle");
-
-    let formFields = "";
-    const displayOrder =
-      item.crd38_displayorder ?? item.displayOrder ?? item.order ?? 0;
-
-    if (type === "testimony") {
-      const name = item.crd38_name || item.name || "";
-      const quote = item.crd38_quote || item.quote || "";
-      const paragraph = item.crd38_paragraphs || item.paragraph || "";
-      const tags =
-        item.crd38_tags ||
-        (Array.isArray(item.tags) ? item.tags.join(", ") : "");
-      const photoPath = item.crd38_imageurl || item.image?.data || "";
-      const computedPath = this._getTestimonyImagePath(item);
-
-      formFields = `
-        <div class="edit-form-group">
-          <label for="editName" class="edit-form-label">Name:</label>
-          <input type="text" id="editName" class="edit-form-input" value="${this._escapeHtml(name)}" />
-        </div>
-
-        <div class="edit-form-group">
-          <label for="editImageData" class="edit-form-label">Photo Data / Image URL:</label>
-          <input type="text" id="editImageData" class="edit-form-input" placeholder="e.g. /john_smith.jpg (Leave empty for fallback path)" value="${this._escapeHtml(photoPath)}" />
-          <small class="edit-form-help">Computed Path: <code id="editComputedPath">${this._escapeHtml(computedPath)}</code></small>
-        </div>
-
-        <div class="edit-form-group">
-          <label class="edit-form-label">Live Photo Preview:</label>
-          <div class="modal-photo-preview-box">
-            <div class="admin-avatar-thumb">
-              <img src="${this._escapeHtml(computedPath)}" id="editPhotoPreviewImg" alt="Preview" class="admin-avatar-img" data-initials="${this._getInitials(name)}" />
-            </div>
-            <span class="preview-text">Displays in carousel avatars</span>
-          </div>
-        </div>
-
-        <div class="edit-form-group">
-          <label for="editQuote" class="edit-form-label">Quote:</label>
-          <textarea id="editQuote" class="edit-form-textarea short">${this._escapeHtml(quote)}</textarea>
-        </div>
-
-        <div class="edit-form-group">
-          <label for="editParagraphs" class="edit-form-label">Main Paragraph Content:</label>
-          <textarea id="editParagraphs" class="edit-form-textarea tall">${this._escapeHtml(paragraph)}</textarea>
-        </div>
-
-        <div class="edit-form-group">
-          <label for="editTags" class="edit-form-label">Tags (comma-separated):</label>
-          <input type="text" id="editTags" class="edit-form-input" value="${this._escapeHtml(tags)}" />
-        </div>
-      `;
+    if (section.type === "quiz") {
+      fields += input(`${base}.question`, "Question", section.question || "", {full: true});
+      fields += `<div class="admin-field full"><label>Answers</label><div class="admin-repeat">${(section.answers || []).map((answer, j) =>
+        `<div class="admin-section-card"><div class="admin-section-card-head"><strong>Answer ${j + 1}</strong><button type="button" class="admin-button" data-remove-answer="${index}:${j}">Remove</button></div><div class="admin-section-fields">${input(`${base}.answers.${j}.text`, "Answer text", answer.text)}${input(`${base}.answers.${j}.correct`, "Correct answer", answer.correct, {checkbox: true})}</div></div>`).join("")}</div><button type="button" class="admin-button" data-add-answer="${index}">Add answer</button></div>`;
+      fields += input(`${base}.explanation`, "Explanation", section.explanation || "", {rows: 3, full: true});
+    }
+    return `<div class="admin-section-card"><div class="admin-section-card-head"><h4>Section ${index + 1}</h4><div class="admin-actions"><button type="button" class="admin-button" data-move-section="${index}:-1" ${index === 0 ? "disabled" : ""}>Move up</button><button type="button" class="admin-button" data-move-section="${index}:1" ${index === state.draft.sections.length - 1 ? "disabled" : ""}>Move down</button><button type="button" class="admin-button" data-remove-section="${index}">Remove</button></div></div><div class="admin-section-fields">${fields}</div></div>`;
+  }
+  function renderEditor() {
+    const data = state.draft, kind = state.item.kind;
+    let fields = "";
+    if (isImported()) {
+      const descriptors = state.item.template?.editableFields || state.item.editableFields || Object.keys(data.fields || {}).map((key) => ({key, label: key.replace(/([A-Z])/g, " $1")}));
+      fields = `<div class="admin-form-section"><h3>Settings</h3></div>` +
+        input("description", "Description", data.description || "", {rows: 3, full: true}) +
+        input("displayOrder", "Display order", data.displayOrder ?? "", {type: "number"}) +
+        input("slug", "Page address", data.slug || "", {readonly: !!state.item.revision, help: state.item.revision ? "Page address is fixed after the first save." : "Optional. Created automatically when published."});
+      if (kind === "module") fields += input("learningPathId", "Learning pathway", data.learningPathId || "", {select: [["", "Choose a pathway"], ...state.learningPaths.map((item) => [item.id, displayName(item)])]}) +
+        input("required", "Required module", data.required || false, {checkbox: true});
+      if (kind === "agent") fields += input("category", "Category", data.category || "") +
+        input("launchUrl", "Launch link", data.launchUrl || "", {full: true, help: "Use an HTTPS or local page link."}) +
+        input("imageUrl", "Image", data.imageUrl || "", {image: true, full: true});
+      fields += `<div class="admin-form-section"><h3>Page content</h3><p>Edit the visible text and links for this page.</p></div>` +
+        descriptors.map((field) => input(`fields.${field.key}`, field.label, data.fields?.[field.key] || "", {rows: field.type === "textarea" ? 5 : 0, full: true, help: field.type === "url" ? "Use an HTTPS or local page link." : ""})).join("");
     } else {
-      const title = item.crd38_name || "";
-      const description = item.crd38_description || "";
-
-      formFields = `
-        <div class="edit-form-group">
-          <label for="editTitle" class="edit-form-label">Title / Name:</label>
-          <input type="text" id="editTitle" class="edit-form-input" value="${this._escapeHtml(title)}" />
-        </div>
-
-        <div class="edit-form-group">
-          <label for="editDisplayOrder" class="edit-form-label">Display Order:</label>
-          <input type="number" id="editDisplayOrder" class="edit-form-input" value="${displayOrder}" />
-        </div>
-
-        <div class="edit-form-group">
-          <label for="editDescription" class="edit-form-label">Description:</label>
-          <textarea id="editDescription" class="edit-form-textarea medium">${this._escapeHtml(description)}</textarea>
-        </div>
-      `;
-      if (type === "learningPath") {
-        formFields += `
-          <div class="edit-form-group">
-            <label for="editRoleRequirement" class="edit-form-label">Job title rule</label>
-            <input id="editRoleRequirement" class="edit-form-input" value="${this._escapeHtml(item.crd38_rolerequirement || "")}" />
-            <small class="edit-form-help">Leave blank for everyone. Separate job title terms with commas; prefix exclusions with !.</small>
-          </div>`;
-      } else if (type === "module") {
-        const selected = item._crd38_learningpathref_value || this.state.selectedJourneyId || "";
-        formFields += `
-          <div class="edit-form-group">
-            <label for="editLearningPath" class="edit-form-label">Learning journey</label>
-            <select id="editLearningPath" class="edit-form-input" required>
-              <option value="">Select a journey</option>
-              ${this.state.learningPaths.map(path => {
-                const id = path.crd38_learningpathid;
-                return `<option value="${this._escapeHtml(id)}" ${id === selected ? "selected" : ""}>${this._escapeHtml(path.crd38_name || "Untitled journey")}</option>`;
-              }).join("")}
-            </select>
-          </div>
-          <div class="edit-form-group">
-            <label for="editPageUrl" class="edit-form-label">Page URL</label>
-            <input id="editPageUrl" class="edit-form-input" value="${this._escapeHtml(item.crd38_pageurl || "")}" placeholder="/training/module" required />
-          </div>
-          <div class="edit-form-group">
-            <label for="editRequired" class="edit-form-label">Required module</label>
-            <input id="editRequired" type="checkbox" ${item.crd38_required ? "checked" : ""} />
-          </div>`;
+      fields = input("title", kind === "testimony" ? "Person's name" : "Title", data.title, {required: true});
+      if (["module", "agent", "page"].includes(kind)) fields += input("slug", "Page address", data.slug || "", {readonly: !!state.item.revision, help: state.item.revision ? "Page address is fixed after the first save." : "Optional. Created automatically when published."});
+      fields +=
+        input("description", "Description", data.description || "", {rows: 4, full: true}) +
+        input("displayOrder", "Display order", data.displayOrder ?? "", {type: "number"});
+      if (kind === "module") fields += input("learningPathId", "Learning pathway", data.learningPathId || "", {select: [["", "Choose a pathway"], ...state.learningPaths.map((item) => [item.id, displayName(item)])]}) +
+        input("required", "Required module", data.required || false, {checkbox: true});
+      if (kind === "learningPath") fields += input("roleRequirement", "Audience or role", data.roleRequirement || "");
+      if (kind === "prompt") fields += input("category", "Category", data.category || "") + input("prompt", "Prompt", data.prompt || "", {rows: 6, full: true});
+      if (kind === "testimony") fields += input("quote", "Quote", data.quote || "", {rows: 4, full: true}) +
+        lines("paragraphs", "Story paragraphs", data.paragraphs, "Write one paragraph per line.") +
+        lines("tags", "Tags", data.tags, "Write one tag per line.") +
+        input("imageUrl", "Portrait image", data.imageUrl || "", {image: true, full: true});
+      if (kind === "agent") fields += input("category", "Category", data.category || "") +
+        input("launchUrl", "Launch link", data.launchUrl || "", {full: true, help: "Use an HTTPS or local page link."}) +
+        input("imageUrl", "Image", data.imageUrl || "", {image: true, full: true});
+      if (["page", "module", "agent"].includes(kind)) fields += `<div class="admin-form-section"><h3>Page sections</h3><p>Add the content people will see on the page.</p><div class="admin-repeat">${(data.sections || []).map(sectionEditor).join("")}</div><div class="admin-add-row"><button type="button" class="admin-button" data-add-section>Add section</button></div></div>`;
+    }
+    $("adminForm").innerHTML = `<div class="admin-form-grid">${fields}</div>`;
+    updateStatus();
+  }
+  function fieldChanged(target) {
+    const path = target.dataset.path;
+    if (!path || !state.draft) return;
+    let value = target.type === "checkbox" ? target.checked : target.value;
+    if (["tags", "paragraphs"].includes(path)) value = value.split("\n").map((line) => line.trim()).filter(Boolean);
+    if (path === "displayOrder") value = value === "" ? "" : Number(value);
+    setPath(state.draft, path, value);
+    if (path === "fields.title") state.draft.title = value;
+    if (path === "title" && state.draft.fields && Object.hasOwn(state.draft.fields, "title")) state.draft.fields.title = value;
+    markDirty();
+    if (path.endsWith(".type")) {
+      const index = Number(path.split(".")[1]);
+      state.draft.sections[index] = {type: value, title: state.draft.sections[index].title || "", items: [], answers: []};
+      renderEditor();
+      $(target.id)?.focus();
+    }
+  }
+  function validate(full = false) {
+    const form = $("adminForm");
+    if (!form.reportValidity()) return false;
+    if (!isImported() && !state.draft.title?.trim()) {
+      notice("Add a title before saving.", true); form.querySelector('[data-path="title"]')?.focus(); return false;
+    }
+    if (full && state.item.kind === "module" && !state.draft.learningPathId) {
+      notice("Choose a learning pathway for this module.", true); form.querySelector('[data-path="learningPathId"]')?.focus(); return false;
+    }
+    if (full && state.item.kind === "prompt" && !state.draft.prompt?.trim()) {
+      notice("Add the prompt before saving.", true); form.querySelector('[data-path="prompt"]')?.focus(); return false;
+    }
+    if (state.draft.sections?.some((s) => s.type === "image" && s.url && !s.alt?.trim())) {
+      notice("Add an image description to each image section.", true); return false;
+    }
+    const urls = [state.draft.imageUrl, state.draft.launchUrl, ...(state.draft.sections || []).filter((s) => s.type === "image").map((s) => s.url),
+      ...(state.item.template?.editableFields || []).filter((field) => field.type === "url").map((field) => state.draft.fields?.[field.key])];
+    if (urls.some((url) => url && !window.ConnectHubContent?.safeUrl(url))) {
+      notice("Use HTTPS or a local page link for image and launch links.", true); return false;
+    }
+    if (full && window.ConnectHubContent?.validate) {
+      const result = window.ConnectHubContent.validate(state.draft, state.item.kind);
+      if (!result.valid) { notice(result.errors.join(" "), true); return false; }
+    }
+    return true;
+  }
+  function validateControl(target) {
+    if (!target.dataset.path) return;
+    const path = target.dataset.path;
+    const isUrl = ["imageUrl", "launchUrl"].includes(path) || /\.url$/.test(path) ||
+      (path.startsWith("fields.") && (state.item.template?.editableFields || []).some((field) => field.key === path.slice(7) && field.type === "url"));
+    const message = isUrl && target.value.trim() && !window.ConnectHubContent?.safeUrl(target.value) ? "Use an HTTPS or local page link." : "";
+    target.setCustomValidity(message);
+    let error = target.parentElement.querySelector(".admin-error");
+    if (message && !error) { error = document.createElement("small"); error.className = "admin-error"; target.parentElement.append(error); }
+    if (error) { error.textContent = message; if (!message) error.remove(); }
+  }
+  function renderImages() {
+    const images = [...state.images, ...state.items.flatMap((item) => {
+      const draft = item.draft || {};
+      return [draft.imageUrl, ...(draft.sections || []).filter((s) => s.type === "image").map((s) => s.url)].filter(Boolean).map((url) => ({url, alt: draft.description || draft.title || item.name || "Content image"}));
+    })].filter((image, index, all) => all.findIndex((other) => other.url === image.url) === index);
+    $("adminImages").innerHTML = images.length ? images.map((image, index) =>
+      `<div class="admin-image-card"><img src="${escape(image.url)}" alt="${escape(image.alt)}" loading="lazy"><p>${escape(image.alt)}</p>${state.draft && state.imageTarget ? `<button class="admin-button" type="button" data-use-image="${index}">Use image</button>` : ""}</div>`).join("") : '<div class="admin-empty">No images yet. Upload the first one above.</div>';
+    state.visibleImages = images;
+  }
+  async function fileToImage(file) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Choose a JPEG, PNG or WebP image.");
+    if (file.size > 20 * 1024 * 1024) throw new Error("Choose an image under 20 MB.");
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
+    const type = file.type === "image/png" ? "image/png" : "image/jpeg";
+    let blob = await new Promise((resolve) => canvas.toBlob(resolve, type, .85));
+    if (!blob) throw new Error("The image could not be prepared.");
+    if (blob.size > 500 * 1024 && type === "image/png") {
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", .8));
+    }
+    if (blob.size > 500 * 1024) {
+      for (const quality of [.7, .55, .4]) {
+        blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+        if (blob.size <= 500 * 1024) break;
       }
     }
-
-    modalOverlay.innerHTML = `
-      <div class="edit-modal-card">
-        <h2 id="editModalTitle" class="edit-modal-title">${recordId ? "Edit" : "Create"} ${typeLabel}</h2>
-        <form id="editForm">
-          ${formFields}
-          <div class="edit-modal-actions">
-            <button type="button" class="edit-modal-btn cancel" data-action="close-edit-modal">Cancel</button>
-            <button type="submit" class="edit-modal-btn save" id="saveEditBtn">${recordId ? "Save changes" : "Create"}</button>
-          </div>
-        </form>
-      </div>
-    `;
-
-    modalOverlay.classList.add("is-open");
-    modalOverlay.querySelector("input, textarea, select")?.focus();
-
-    // Dynamic reactive preview when updating image inputs
-    const imageInput = document.getElementById("editImageData");
-    const nameInput = document.getElementById("editName");
-    const previewImgContainer = modalOverlay.querySelector(
-      ".modal-photo-preview-box",
-    );
-
-    const updatePreview = () => {
-      console.log(
-        "[AdminHub._showEditModal] Live reactive preview input updated.",
-      );
-      if (!previewImgContainer) return;
-      const currentVal = imageInput ? imageInput.value.trim() : "";
-      const currentName = nameInput ? nameInput.value.trim() : "";
-      const newPath = currentVal || this._buildFallbackImagePath(currentName);
-      const initials = this._getInitials(currentName);
-
-      console.log(
-        "[AdminHub._showEditModal] Computing reactive avatar image values:",
-        {
-          currentVal,
-          currentName,
-          newPath,
-          initials,
-        },
-      );
-
-      const computedPathEl = document.getElementById("editComputedPath");
-      if (computedPathEl) computedPathEl.textContent = newPath;
-
-      const avatarThumb = previewImgContainer.querySelector(
-        ".admin-avatar-thumb",
-      );
-      if (avatarThumb) {
-        avatarThumb.classList.remove("image-failed");
-        avatarThumb.innerHTML = `<img src="${this._escapeHtml(newPath)}" id="editPhotoPreviewImg" alt="Preview" class="admin-avatar-img" data-initials="${initials}" />`;
-      }
-    };
-
-    if (imageInput) imageInput.addEventListener("input", updatePreview);
-    if (nameInput) nameInput.addEventListener("input", updatePreview);
-
-    const form = document.getElementById("editForm");
-    if (form) {
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        console.log(
-          `[AdminHub._showEditModal] Submitting form updates for entity type [${type}] with ID [${recordId}]`,
-        );
-
-        const saveBtn = document.getElementById("saveEditBtn");
-        if (saveBtn) {
-          saveBtn.disabled = true;
-          saveBtn.textContent = "Saving...";
-        }
-
-        try {
-          let payloadData = {};
-
-          if (type === "testimony") {
-            payloadData = {
-              name: document.getElementById("editName")?.value || "",
-              photopath: document.getElementById("editImageData")?.value || "",
-              quote: document.getElementById("editQuote")?.value || "",
-              paragraph: document.getElementById("editParagraphs")?.value || "",
-              tags: document.getElementById("editTags")?.value || "",
-            };
-          } else {
-            payloadData = {
-              name: document.getElementById("editTitle")?.value || "",
-              displayOrder:
-                document.getElementById("editDisplayOrder")?.value || 0,
-              description:
-                document.getElementById("editDescription")?.value || "",
-            };
-            if (type === "learningPath")
-              payloadData.roleRequirement = document.getElementById("editRoleRequirement")?.value || "";
-            if (type === "module") {
-              payloadData.learningPathId = document.getElementById("editLearningPath")?.value || "";
-              payloadData.pageUrl = document.getElementById("editPageUrl")?.value || "";
-              payloadData.required = document.getElementById("editRequired")?.checked === true;
-            }
-          }
-
-          const updatePayload = {
-            entityType: type,
-            id: recordId,
-            data: payloadData,
-          };
-
-          console.log(
-            "[AdminHub._showEditModal] Submitting update payload to server:",
-            updatePayload,
-          );
-          await this._callServer(recordId ? "updateData" : "createData", "", updatePayload);
-
-          this._closeEditModal();
-
-          // Refresh dashboard data post update
-          console.log(
-            "[AdminHub._showEditModal] Update successful. Re-fetching dashboard data...",
-          );
-          const freshData = await this._callServer("getAdminOverview");
-          this.state.learningPaths = freshData.learningPaths || [];
-          this.state.modules = freshData.modules || [];
-          this.state.testimonies = freshData.testimonies || [];
-          if (freshData.summaryStats) this.state.summaryStats = {
-            ...freshData.summaryStats,
-            testimoniesCount: this.state.testimonies.length,
-          };
-
-          this.renderStats();
-          this.renderCurrentWorkspaceView();
-        } catch (err) {
-          console.error(
-            "[AdminHub._showEditModal] Failed to save updates:",
-            err,
-          );
-          alert("Error saving record changes: " + err.message);
-        } finally {
-          if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = recordId ? "Save changes" : "Create";
-          }
-        }
+    if (!blob || blob.size > 500 * 1024) throw new Error("This image could not be reduced below 500 KB. Choose a smaller image.");
+    return blob;
+  }
+  async function upload(event) {
+    event.preventDefault();
+    const file = $("adminImageFile").files[0], alt = $("adminImageAlt").value.trim();
+    if (!file || !alt) { $("adminUploadForm").reportValidity(); return; }
+    try {
+      const blob = await fileToImage(file);
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.onerror = reject; reader.readAsDataURL(blob);
       });
-    }
-  },
-
-  _closeEditModal() {
-    console.log("[AdminHub._closeEditModal] Closing edit modal overlay.");
-    const modalOverlay = document.getElementById("visualEditModal");
-    if (modalOverlay) {
-      modalOverlay.classList.remove("is-open");
-    }
-    this._previousFocus?.focus?.();
-  },
-};
-
-window.addEventListener("DOMContentLoaded", () => {
-  console.log(
-    "[AdminHub] DOMContentLoaded event triggered. Starting AdminHub application...",
-  );
-  AdminHub.init();
-});
+      const uploaded = await submitOperation("uploadMedia", {name: file.name.replace(/\.[^.]+$/, "") + (blob.type === "image/png" ? ".png" : ".jpg"), contentType: blob.type, base64, alt});
+      if (uploaded) $("adminUploadForm").reset();
+    } catch (error) { notice(error.message, true); }
+  }
+  root.addEventListener("input", (event) => { if (event.target.dataset.path) { fieldChanged(event.target); validateControl(event.target); } });
+  root.addEventListener("change", (event) => { if (event.target.dataset.path) { fieldChanged(event.target); validateControl(event.target); } });
+  root.addEventListener("click", async (event) => {
+    const button = event.target.closest("button");
+    if (!button || state.busy) return;
+    try {
+      if (button.dataset.kind) selectKind(button.dataset.kind);
+      else if (button.dataset.open) await openItem(button.dataset.open);
+      else if (button.id === "adminCreate") newItem($("adminNewKind").value);
+      else if (button.id === "adminCreateInline") newItem(state.kind === "all" || state.kind === "images" ? $("adminNewKind").value : state.kind);
+      else if (button.id === "adminBack") selectKind(state.kind);
+      else if (button.id === "adminSave") { if (validate()) await submitOperation("saveContent", {id: state.item.id, kind: state.item.kind, revision: state.item.revision || 0, data: state.draft}); }
+      else if (button.id === "adminPublish") {
+        if (state.dirty) { notice("Save your draft before publishing.", true); return; }
+        if (!validate(true)) return;
+        await submitOperation("publishContent", {id: state.item.id, revision: state.item.revision});
+      } else if (button.id === "adminUnpublish") {
+        if (!confirm("Unpublish this content? Existing learning progress will be kept.")) return;
+        await submitOperation("unpublishContent", {id: state.item.id, revision: state.item.revision});
+      } else if (button.id === "adminDuplicate") {
+        const copy = clone(state.draft); copy.title = (copy.title || displayName(state.item)) + " copy";
+        if (["page", "module", "agent"].includes(state.item.kind)) copy.slug = "";
+        if (copy.fields && Object.hasOwn(copy.fields, "title")) copy.fields.title = copy.title;
+        state.item = {id: uuid(), kind: state.item.kind, revision: 0, status: "draft", published: false, template: state.item.template};
+        state.draft = copy; markDirty(); renderEditor();
+      } else if (button.id === "adminPreview") {
+        if (!validate(true)) return;
+        if (!window.ConnectHubContent?.render) throw new Error("Preview is unavailable right now.");
+        const preview = $("adminDialogBody");
+        preview.innerHTML = '<div class="admin-preview-frame">' + window.ConnectHubContent.render(state.draft, state.item.kind, state.item.template) + "</div>";
+        preview.querySelectorAll("[id]").forEach((element) => element.removeAttribute("id"));
+        preview.querySelectorAll("a").forEach((link) => { link.removeAttribute("href"); link.tabIndex = -1; });
+        preview.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; control.tabIndex = -1; });
+        $("adminDialog").showModal();
+      } else if (button.id === "adminDialogClose") $("adminDialog").close();
+      else if (button.id === "adminImport") {
+        if (state.pending || state.retry) { notice("Resolve the earlier request before importing content.", true); return; }
+        setBusy(true); notice("Importing existing content…");
+        try { await request("importContent", {}); await loadList(); notice("Existing content imported."); }
+        finally { setBusy(false); }
+      } else if (button.dataset.addSection !== undefined) { state.draft.sections ||= []; state.draft.sections.push({type: "text", title: "", body: ""}); markDirty(); renderEditor(); }
+      else if (button.dataset.removeSection !== undefined) { state.draft.sections.splice(Number(button.dataset.removeSection), 1); markDirty(); renderEditor(); }
+      else if (button.dataset.moveSection) { const [i, direction] = button.dataset.moveSection.split(":").map(Number); const [section] = state.draft.sections.splice(i, 1); state.draft.sections.splice(i + direction, 0, section); markDirty(); renderEditor(); }
+      else if (button.dataset.addItem !== undefined) { state.draft.sections[Number(button.dataset.addItem)].items.push({title: "", body: ""}); markDirty(); renderEditor(); }
+      else if (button.dataset.removeItem) { const [i, j] = button.dataset.removeItem.split(":").map(Number); state.draft.sections[i].items.splice(j, 1); markDirty(); renderEditor(); }
+      else if (button.dataset.addAnswer !== undefined) { state.draft.sections[Number(button.dataset.addAnswer)].answers.push({text: "", correct: false}); markDirty(); renderEditor(); }
+      else if (button.dataset.removeAnswer) { const [i, j] = button.dataset.removeAnswer.split(":").map(Number); state.draft.sections[i].answers.splice(j, 1); markDirty(); renderEditor(); }
+      else if (button.dataset.imageTarget) { state.imageTarget = button.dataset.imageTarget; renderImages(); show("images"); }
+      else if (button.dataset.useImage !== undefined) {
+        setPath(state.draft, state.imageTarget, state.visibleImages[Number(button.dataset.useImage)].url);
+        markDirty(); renderEditor(); show("editor");
+      }
+    } catch (error) { notice(error.message, true); }
+  });
+  $("adminSearch").addEventListener("input", renderList);
+  $("adminStatusFilter").addEventListener("change", renderList);
+  $("adminUploadForm").addEventListener("submit", upload);
+  $("adminForm").addEventListener("submit", (event) => event.preventDefault());
+  for (const type of ["click", "submit"]) $("adminDialogBody").addEventListener(type, (event) => {
+    event.preventDefault(); event.stopPropagation();
+  }, true);
+  window.addEventListener("beforeunload", (event) => { if (state.dirty) { event.preventDefault(); event.returnValue = ""; } });
+  renderNav();
+  loadList().then(() => {
+    const key = pendingKey();
+    if (key) try {
+      const saved = sessionStorage.getItem(key);
+      if (saved) { state.pending = JSON.parse(saved); notice("An earlier operation may still be running."); resumePending(); }
+    } catch (_) { try { sessionStorage.removeItem(key); } catch (_) {} }
+  }).catch((error) => notice(error.message, true));
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, {once: true});
+  else start();
+})();

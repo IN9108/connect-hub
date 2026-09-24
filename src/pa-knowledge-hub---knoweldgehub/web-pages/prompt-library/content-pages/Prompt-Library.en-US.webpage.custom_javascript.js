@@ -1,4 +1,33 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  const grid = document.querySelector(".prompt-library-grid");
+  const filters = document.querySelector(".category-filter-container");
+  try {
+    if (!window.ConnectHubContent) await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "/content.js";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    const prompts = await ConnectHubContent.list("prompt");
+    grid.innerHTML = prompts.map((item) => ConnectHubContent.renderCard(item, "prompt")).join("") || '<p role="status">No prompts are published yet.</p>';
+    const categories = [...new Set(prompts.map((item) => item.category).filter(Boolean))].sort();
+    const overview = document.querySelectorAll(".prompt-overview .overview-number");
+    if (overview[0]) overview[0].textContent = String(categories.length);
+    if (overview[1]) overview[1].textContent = String(prompts.length);
+    categories.forEach((category) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "filter-btn";
+      button.dataset.category = category;
+      button.textContent = category;
+      filters.appendChild(button);
+    });
+  } catch (error) {
+    console.error("Unable to load prompts:", error);
+    grid.innerHTML = '<p role="alert">Prompts are unavailable right now. Please try again later.</p>';
+    return;
+  }
   initialiseSearchAndFilter();
   initialisePromptGenerator();
   initialiseCopyButtons();
