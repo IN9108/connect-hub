@@ -1,21 +1,20 @@
 # Connect Hub handoff
 
-## Objective
-Complete the current root `prompt` against `origin/main`: keep light mode as the default, fix the reported layout issues, restore working data and admin access, and update the solution flow where needed.
+## Objective and baseline
+- Complete the current root `prompt` against `origin/main`. Pulled through `63aae5a` before editing; the new prompt reports Power Pages validator errors in `TrainingHubMaster` and `AdminHubMaster`, asks to verify solution table names, and restore green header/footer rules.
+- `f1ad837` delivered the redesign and site/server logic. `ad85320` fixed the prior data contracts, layout, admin visibility, and created `ConnectHub_1_0_0_8.zip`.
 
-## Completed in source
-- Earlier commit `f1ad837` supplied the redesign, dark mode, caching, admin CRUD, server logic, role-scoped progress, and the editable ContactFiller flow correction.
-- Pulled `origin/main` to `44d59ad` before this batch. The current prompt and a newer unmanaged `ConnectHub_1_0_0_7.zip` arrived in the two commits after `f1ad837`.
-- Made light the default while keeping saved dark preference; fixed the shared background attachment, dark agent-step hover, testimony tag clipping/fades, prompt card width and low-contrast prompt submission copy.
-- Unhid the admin page and activated its existing web link. The page access rule and server logic remain restricted to the `Administrators` web role.
-- Matched testimony image and paragraph code to the solution's actual `crd38_imageurl` and `crd38_paragraphs` columns. Added visible home/admin load errors and a JSON request body for training POSTs.
-- Created `ConnectHub_1_0_0_8.zip` as an **unmanaged** package from 1.0.0.7. Only the solution version and ContactFiller workflow changed; the workflow now matches `power-platform/flows/ContactFiller.flow.json`.
+## Completed in editable site source
+- Replaced `startsWith(` in training role checks and `function (` sort callbacks in admin logic. These were the text matched by the tenant's prohibited-pattern errors; the existing behavior is preserved.
+- Removed stale `crd38_title` and `crd38_moduleid` fallbacks. All `crd38_` names referenced in site JavaScript now match names or entity sets in the solution's `customizations.xml`; the three navigation binding names also occur there.
+- Kept the existing green header bottom rule and changed the footer top rule to the same 2px brand green. Added a focused check for the two reported prohibited patterns.
 
-## Checks
-- `node helpers/check-server-logic.js` and `node helpers/check-client-requests.js` pass; changed JavaScript passes `node --check`; `git diff --check` passes.
-- Solution ZIP CRC and changed-entry comparison pass; `pac solution unpack` succeeds. Testimony field names were checked against `customizations.xml`.
-- Local Playwright preview checked light default under dark OS preference, theme toggle, fixed background, two-column desktop/one-column mobile prompt grid, prompt search/copy, dark agent hover, and testimony tags. These are local previews.
+## Checks and artifact status
+- `node helpers/check-server-logic.js`, `node helpers/check-client-requests.js`, `node --check` on the changed admin JavaScript and both server scripts, and `git diff --check` pass. A broader local scan found no other documented restricted patterns in the two server scripts.
+- `ConnectHub_1_0_0_8.zip` passes ZIP CRC; `solution.xml` says version 1.0.0.8 and `Managed=0`. Its required entity sets and columns are present. The ZIP was not changed in this batch; the Power Pages site source lives separately under `src/`.
+- Local Playwright CSS preview rendered the header and footer with `2px solid rgb(139, 197, 63)` rules. This was a temporary local preview, not a live site test.
+- No managed release was created or verified. `.playwright-cli/` is unrelated untracked local browser output and remains untouched.
 
-## Unverified / exact next action
-- No PAC authentication profile exists on this machine. No site upload, solution import, Dataverse data/role assignment, server response, cloud-flow run, or live Power Pages interaction was verified. `ConnectHub_1_0_0_8.zip` contains solution components, not the separate Power Pages site source under `src/`, and is not a managed release.
-- Authenticate to the intended development environment; upload the site source and import the unmanaged package. Inspect live Network responses for `TrainingHubMaster` and `AdminHubMaster`, verify the user's `Administrators` web role, table permissions and data, then test admin CRUD, progress, testimonies and ContactFiller. Export a managed release only after those tenant checks pass.
+## Tenant work still required
+- Authenticate to the intended Power Platform environment; upload the updated Power Pages site source and import the unmanaged solution if not already imported. Verify the tenant accepts both server scripts, inspect live Network responses and Dataverse data/permissions, confirm the intended user's `Administrators` web role, and test admin CRUD, progress, testimonies, and ContactFiller.
+- Export a managed release only after those tenant checks pass. No site upload, solution import, server response, flow run, managed export, or live functionality was verified locally.

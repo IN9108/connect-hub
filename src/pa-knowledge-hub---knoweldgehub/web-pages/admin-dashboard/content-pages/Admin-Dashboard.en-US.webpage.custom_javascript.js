@@ -479,7 +479,7 @@ window.AdminHub = {
           (lp.crd38_learningpathid || lp.id) === this.state.selectedJourneyId,
       );
       const journeyName = journey
-        ? journey.crd38_name || journey.crd38_title || "Journey"
+        ? journey.crd38_name || "Journey"
         : "All Journeys";
       const filteredModules = this._getModulesForSelectedJourney();
 
@@ -599,7 +599,7 @@ window.AdminHub = {
           </div>
 
           <div class="admin-object-content">
-            <h3>${this._escapeHtml(lp.crd38_name || lp.crd38_title || "Untitled")}</h3>
+            <h3>${this._escapeHtml(lp.crd38_name || "Untitled")}</h3>
             <p>${this._escapeHtml(lp.crd38_description || "No description provided.")}</p>
           </div>
 
@@ -653,7 +653,7 @@ window.AdminHub = {
       modulesList
         .map((m) => {
           const moduleId =
-            m.crd38_trainingmoduleid || m.crd38_moduleid || m.id || "";
+            m.crd38_trainingmoduleid || m.id || "";
           return `
         <article class="admin-object-card" data-id="${moduleId}">
           <div class="admin-object-top">
@@ -821,7 +821,7 @@ window.AdminHub = {
     const allItems = [
       ...learningPaths.map((lp) => ({
         title: "Learning Journey",
-        subtitle: lp.crd38_name || lp.crd38_title || "Untitled Journey",
+        subtitle: lp.crd38_name || "Untitled Journey",
         date: lp.createdon ? new Date(lp.createdon) : new Date(),
       })),
       ...modules.map((m) => ({
@@ -896,7 +896,7 @@ window.AdminHub = {
       );
     } else if (type === "module") {
       itemData = this.state.modules.find(
-        (m) => (m.crd38_trainingmoduleid || m.crd38_moduleid || m.id) === id,
+        (m) => (m.crd38_trainingmoduleid || m.id) === id,
       );
     } else if (type === "testimony") {
       itemData = this.state.testimonies.find(
@@ -1036,7 +1036,7 @@ window.AdminHub = {
         </div>
       `;
     } else {
-      const title = item.crd38_name || item.crd38_title || "";
+      const title = item.crd38_name || "";
       const description = item.crd38_description || "";
 
       formFields = `

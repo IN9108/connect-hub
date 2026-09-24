@@ -4,6 +4,10 @@ const vm = require("node:vm");
 const path = require("node:path");
 
 const root = path.join(__dirname, "..", "src", "pa-knowledge-hub---knoweldgehub", "server-logic");
+for (const name of ["TrainingHubMaster", "AdminHubMaster"]) {
+  const source = fs.readFileSync(path.join(root, `${name}.js`), "utf8");
+  assert(!/with\s*\(|Function\s*\(/i.test(source), `${name} contains a Power Pages prohibited pattern`);
+}
 const contactId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const pathId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const moduleId = "cccccccc-cccc-cccc-cccc-cccccccccccc";

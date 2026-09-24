@@ -161,9 +161,9 @@ function handleRequest(method) {
     const terms = String(path.crd38_rolerequirement || "")
       .toLowerCase().split(",").map((term) => term.trim()).filter(Boolean);
     const title = String(jobTitle || "").toLowerCase();
-    if (terms.some((term) => term.startsWith("!") && title.includes(term.slice(1))))
+    if (terms.some((term) => term.charAt(0) === "!" && title.includes(term.slice(1))))
       return false;
-    const allowed = terms.filter((term) => !term.startsWith("!"));
+    const allowed = terms.filter((term) => term.charAt(0) !== "!");
     return !allowed.length || allowed.some((term) => title.includes(term));
   }
 
@@ -304,7 +304,7 @@ function handleRequest(method) {
             currentModule = firstIncompleteModule;
 
             logInfo(
-              `[DEBUG] Selected current module "${currentModule.crd38_name}" from learning journey "${learningPath.crd38_name || learningPath.crd38_title || learningPath.crd38_learningpathid}"`,
+              `[DEBUG] Selected current module "${currentModule.crd38_name}" from learning journey "${learningPath.crd38_name || learningPath.crd38_learningpathid}"`,
             );
 
             break;
@@ -431,7 +431,7 @@ function handleRequest(method) {
         if (newlyCreatedPaths.length > 0) {
           whatsNew.newLearningPaths = newlyCreatedPaths.map((path) => ({
             id: path.crd38_learningpathid,
-            name: path.crd38_name || path.crd38_title,
+            name: path.crd38_name,
             createdOn: path.createdon,
           }));
 

@@ -71,13 +71,13 @@ function get() {
       const modules = fetchTableRecords(ENTITY.modules);
       const testimonies = fetchTableRecords(ENTITY.testimonies);
 
-      learningPaths.sort(function(a, b) {
+      learningPaths.sort((a, b) => {
         var orderA = parseInt(a.crd38_displayorder, 10) || 0;
         var orderB = parseInt(b.crd38_displayorder, 10) || 0;
         return orderA - orderB;
       });
 
-      modules.sort(function(a, b) {
+      modules.sort((a, b) => {
         var orderA = parseInt(a.crd38_displayorder, 10) || 0;
         var orderB = parseInt(b.crd38_displayorder, 10) || 0;
         return orderA - orderB;

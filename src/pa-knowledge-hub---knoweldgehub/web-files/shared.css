@@ -2319,7 +2319,7 @@ textarea::placeholder {
 .footer-bottom {
   background: var(--card);
   color: var(--muted);
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--primary);
 }
 .footer-bottom {
   padding: 24px 0;
