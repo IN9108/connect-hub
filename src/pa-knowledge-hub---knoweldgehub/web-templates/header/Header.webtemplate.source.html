@@ -157,17 +157,41 @@
 
 </div>
 
-{% if page.breadcrumbs.size > 0 or page.title != 'Home' %}
-<nav class="hub-breadcrumb" aria-label="Breadcrumb">
-    <ol>
-        {% if page.breadcrumbs.size == 0 %}<li><a href="/">Home</a></li>{% endif %}
-        {% for crumb in page.breadcrumbs %}
-        <li><a href="{{ crumb.url | h }}">{{ crumb.title | h }}</a></li>
-        {% endfor %}
-        <li aria-current="page">{{ page.title | h }}</li>
-    </ol>
-</nav>
-{% endif %}
+<nav class="hub-breadcrumb" aria-label="Breadcrumb" hidden><ol></ol></nav>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const nav = document.querySelector(".hub-breadcrumb");
+        const segments = location.pathname.split("/").filter(Boolean);
+        const language = /^[a-z]{2}-[a-z]{2}$/i.test(segments[0]) ? segments.shift() : "";
+        if (segments.length < 2) return;
+
+        const list = nav.querySelector("ol");
+        const home = document.createElement("li");
+        const homeLink = document.createElement("a");
+        homeLink.href = language ? `/${language}/` : "/";
+        homeLink.textContent = "Home";
+        home.append(homeLink);
+        list.append(home);
+
+        segments.forEach(function (segment, index) {
+            const item = document.createElement("li");
+            let name = segment;
+            try { name = decodeURIComponent(segment); } catch (_) { /* Keep the URL text. */ }
+            name = name.replace(/[-_]+/g, " ").replace(/\b\w/g, letter => letter.toUpperCase()).replace(/\b(Ai|Hr|Qa)\b/g, match => match.toUpperCase());
+            if (index === segments.length - 1) {
+                item.textContent = document.querySelector("#mainContent h1")?.textContent?.trim() || name;
+                item.setAttribute("aria-current", "page");
+            } else {
+                const link = document.createElement("a");
+                link.href = `/${language ? language + "/" : ""}${segments.slice(0, index + 1).join("/")}/`;
+                link.textContent = name;
+                item.append(link);
+            }
+            list.append(item);
+        });
+        nav.hidden = false;
+    });
+</script>
 
 {% if user %}
 <script>

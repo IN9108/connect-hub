@@ -2093,9 +2093,28 @@ video {
   border-radius: 16px;
   box-shadow: none;
 }
-.dashboard-shell :is(.stat-card, .dashboard-card, .resource-card, .learning-path-card) {
-  border-left: 4px solid var(--primary);
+.dashboard-stats .stat-card { position: relative; overflow: hidden; }
+.dashboard-stats .stat-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 0 0 0 80px;
+  background: currentColor;
+  opacity: .07;
+  pointer-events: none;
 }
+.dashboard-stats .stat-card:nth-child(1) { background: #1f2929; color: #f7fff0; border-color: #1f2929; }
+.dashboard-stats .stat-card:nth-child(2) { background: #eef6e6; color: #365525; border-color: #d6e6c6; }
+.dashboard-stats .stat-card:nth-child(3) { background: #e9f5f7; color: #195365; border-color: #cbe7ec; }
+.dashboard-stats .stat-card:nth-child(4) { background: #f1edf6; color: #594672; border-color: #dfd5e9; }
+.dashboard-stats .stat-card .stat-number,
+.dashboard-stats .stat-card .stat-label { color: inherit; }
+:root[data-theme="dark"] .dashboard-stats .stat-card:nth-child(2) { background: #203226; color: #d7f3c5; border-color: #385442; }
+:root[data-theme="dark"] .dashboard-stats .stat-card:nth-child(3) { background: #18343b; color: #c7eff5; border-color: #315963; }
+:root[data-theme="dark"] .dashboard-stats .stat-card:nth-child(4) { background: #30283d; color: #eadcf5; border-color: #514263; }
 .stat-number {
   color: var(--text);
   font-size: clamp(1.5rem, 3vw, 2.5rem);
@@ -2208,28 +2227,31 @@ video {
 .training-section.center-content h2 { text-align: center; }
 .training-section .agent-launch-card { text-align: center; }
 .training-shell .dashboard-hero {
-  background: var(--card);
-  border-color: var(--border);
-  box-shadow: var(--shadow-sm);
   gap: 32px;
   text-align: left;
 }
-.training-shell .dashboard-hero::before { content: none; }
-.training-shell .dashboard-hero h1 { color: var(--text) !important; margin-top: 0; }
-.training-shell .hero-description { color: var(--muted); }
+.training-shell .hero-left { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.training-shell .dashboard-hero h1 { color: #f7fff0 !important; margin-top: 0; }
+.training-shell .hero-description { color: #d4e2dc; margin-bottom: 0; }
 .training-shell .hero-stat-card {
-  width: auto;
+  width: 180px;
   height: auto;
-  min-width: 168px;
-  padding: 24px;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  box-shadow: none;
+  min-height: 180px;
+  padding: 28px 20px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .22);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+  position: relative;
+  z-index: 1;
 }
-.training-shell .hero-stat-number { color: var(--accent-text); }
-.training-shell .hero-stat-label { color: var(--muted); }
+.training-shell .hero-stat-number { color: #f7fff0; }
+.training-shell .hero-stat-label { color: #d4e2dc; }
+.hero-stat-track { width: 100%; height: 6px; margin-top: 20px; background: rgba(255, 255, 255, .18); border-radius: 999px; overflow: hidden; }
+.hero-stat-track > div { height: 100%; width: 0; background: var(--primary); border-radius: inherit; transition: width .25s ease; }
 .training-shell .section-heading { text-align: center; }
-.training-shell .role-refresh-container { justify-content: center; }
+.training-shell .role-refresh-container { justify-content: flex-start; flex-wrap: wrap; margin: 24px 0 0; }
+.training-shell .role-refresh-text { color: #d4e2dc; }
+.training-shell .role-refresh-btn { color: #d5f7a6; text-decoration: underline; text-underline-offset: 3px; min-height: 44px; padding: 8px 0; }
 .training-section h3,
 .training-section strong {
   color: var(--accent-text);

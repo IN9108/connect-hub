@@ -11,29 +11,22 @@
         Complete learning journeys, track progress, and unlock advanced content
         as you build your knowledge.
       </p>
+      <div class="role-refresh-container">
+        <span class="role-refresh-text">Not seeing the correct training?</span>
+        <button id="refreshRoleButton" class="role-refresh-btn" type="button">Refresh My Role</button>
+      </div>
     </div>
 
     <div class="hero-right">
       <div class="hero-stat-card">
         <span class="hero-stat-number" id="progressPercentage"> 0% </span>
         <span class="hero-stat-label"> Total Progress </span>
+        <div class="hero-stat-track" aria-hidden="true"><div id="progressFill"></div></div>
       </div>
     </div>
   </div>
 
-  <div style="display: none">
-    <div id="progressFill"></div>
-    <div id="progressText"></div>
-  </div>
-
   <div class="dashboard-section">
-    <div class="role-refresh-container">
-      <span class="role-refresh-text"> Not seeing the correct training? </span>
-
-      <button id="refreshRoleButton" class="role-refresh-btn">
-        Refresh My Role
-      </button>
-    </div>
     <div class="section-heading">
       <h2>Your Learning journeys</h2>
       <p>
