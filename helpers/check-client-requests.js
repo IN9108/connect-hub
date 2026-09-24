@@ -4,8 +4,10 @@ const vm = require("node:vm");
 const path = require("node:path");
 
 const requests = [];
+const saved = new Map();
 const browser = {
-  location: { pathname: "/training" },
+  location: { pathname: "/" },
+  currentContactId: "test-contact",
   document: {
     documentElement: { dataset: {} },
     addEventListener() {},
@@ -13,12 +15,16 @@ const browser = {
     querySelector() { return { value: "csrf-token" }; },
   },
   localStorage: { getItem() { return null; } },
-  sessionStorage: {},
+  sessionStorage: {
+    getItem(key) { return saved.get(key) || null; },
+    setItem(key, value) { saved.set(key, value); },
+    removeItem(key) { saved.delete(key); },
+  },
   matchMedia() { return { matches: true }; },
   addEventListener() {},
   async fetch(url, options) {
     requests.push({ url, options });
-    return { ok: true, json: async () => ({ success: true, data: '{"success":true}' }) };
+    return { ok: true, json: async () => ({ success: true, data: '{"success":true,"data":{"contactId":"test-contact"}}' }) };
   },
 };
 browser.window = browser;
@@ -33,5 +39,13 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "src", "pa-knowled
   assert.equal(requests[1].options.headers["Content-Type"], "application/json");
   assert.equal(requests[1].options.headers.__RequestVerificationToken, "csrf-token");
   assert.equal(requests[1].options.body, "{}");
+  await browser.TrainingHub.init();
+  assert.equal(requests[2].url, "/_api/serverlogics/TrainingHubMaster?action=init&currentPath=%2F");
+  assert.equal(browser.ConnectHub.cache.has("training:dashboard"), true);
+  browser.location.pathname = "/training";
+  await browser.TrainingHub.init();
+  assert.equal(requests.length, 3, "Training must reuse the Home dashboard cache");
+  await browser.TrainingHub.init(true);
+  assert.equal(requests.length, 4, "Forced refresh must still fetch");
   console.log("PASS ConnectHub client requests");
 })().catch(error => { console.error(error); process.exitCode = 1; });

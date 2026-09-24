@@ -1,20 +1,20 @@
 # Connect Hub handoff
 
 ## Objective and baseline
-- Complete the current root `prompt` against `origin/main`. Pulled through `63aae5a` before editing; the new prompt reports Power Pages validator errors in `TrainingHubMaster` and `AdminHubMaster`, asks to verify solution table names, and restore green header/footer rules.
-- `f1ad837` delivered the redesign and site/server logic. `ad85320` fixed the prior data contracts, layout, admin visibility, and created `ConnectHub_1_0_0_8.zip`.
+- Complete the root `prompt` against latest `origin/main`, pulled through `1479821` before editing. It reports card accent fragments, missing header rule/admin link, repeated Home and Training loading, mismatched footer shade, and only a test testimony in the live page.
+- `f1ad837` delivered the redesign and site/server logic. `ad85320` fixed earlier data contracts and layout and added the unmanaged `ConnectHub_1_0_0_8.zip`. `580cd4d` fixed Power Pages validation patterns and the prior header/footer CSS.
 
-## Completed in editable site source
-- Replaced `startsWith(` in training role checks and `function (` sort callbacks in admin logic. These were the text matched by the tenant's prohibited-pattern errors; the existing behavior is preserved.
-- Removed stale `crd38_title` and `crd38_moduleid` fallbacks. All `crd38_` names referenced in site JavaScript now match names or entity sets in the solution's `customizations.xml`; the three navigation binding names also occur there.
-- Kept the existing green header bottom rule and changed the footer top rule to the same 2px brand green. Added a focused check for the two reported prohibited patterns.
+## Editable site source completed
+- Removed the short card accent pseudo-element. Raised header rule specificity above the theme's `.static-top` border reset. Matched footer background to the header. Rendered an explicit `/admin` navigation link for the Power Pages `Administrators` role while skipping the dynamic duplicate.
+- Home and Training now share the Home-context dashboard cache for 15 minutes, keeping Home's path-dependent current module. A warm Home cache hides its overlay at DOM ready. Forced refresh still fetches fresh data.
+- Testimonies combine the published JSON stories with live Dataverse stories by name and discard the known `test`/`test` placeholder. Published stories remain visible if the live endpoint fails.
+- Changed files: `web-files/shared.css`, `web-files/shared.js`, Home and AI Testimonies localized JavaScript, `web-templates/header/Header.webtemplate.source.html`, `helpers/check-client-requests.js`, `helpers/check-testimonies.js`, and this handoff.
 
-## Checks and artifact status
-- `node helpers/check-server-logic.js`, `node helpers/check-client-requests.js`, `node --check` on the changed admin JavaScript and both server scripts, and `git diff --check` pass. A broader local scan found no other documented restricted patterns in the two server scripts.
-- `ConnectHub_1_0_0_8.zip` passes ZIP CRC; `solution.xml` says version 1.0.0.8 and `Managed=0`. Its required entity sets and columns are present. The ZIP was not changed in this batch; the Power Pages site source lives separately under `src/`.
-- Local Playwright CSS preview rendered the header and footer with `2px solid rgb(139, 197, 63)` rules. This was a temporary local preview, not a live site test.
-- No managed release was created or verified. `.playwright-cli/` is unrelated untracked local browser output and remains untouched.
+## Checks and artifacts
+- `node helpers/check-client-requests.js`, `node helpers/check-server-logic.js`, `node helpers/check-testimonies.js`, `node --check` on changed JavaScript, and `git diff --check` pass.
+- Local Playwright preview showed a 2px green header rule, matching `rgb(16, 25, 25)` header/footer backgrounds, no card accent fragments, no 390px horizontal overflow, and 13 distinct published stories. The preview uses local files and mocked server access.
+- `ConnectHub_1_0_0_8.zip` remains unchanged; ZIP CRC passes and `solution.xml` says version `1.0.0.8`, `Managed=0`. No managed release was created or verified. `.playwright-cli/` remains unrelated and untouched.
 
 ## Tenant work still required
-- Authenticate to the intended Power Platform environment; upload the updated Power Pages site source and import the unmanaged solution if not already imported. Verify the tenant accepts both server scripts, inspect live Network responses and Dataverse data/permissions, confirm the intended user's `Administrators` web role, and test admin CRUD, progress, testimonies, and ContactFiller.
-- Export a managed release only after those tenant checks pass. No site upload, solution import, server response, flow run, managed export, or live functionality was verified locally.
+- Upload the updated editable Power Pages site source in the intended environment and confirm the exact user's `Administrators` web role, visible nav link, page access, header/footer, Home/Training cache behavior, and testimonies with live Network responses and Dataverse records.
+- Import the unmanaged solution if needed, test admin CRUD, progress and ContactFiller in the tenant, then export a managed release after acceptance. No site upload, solution import, server response, flow run, managed export, or live functionality was verified locally.

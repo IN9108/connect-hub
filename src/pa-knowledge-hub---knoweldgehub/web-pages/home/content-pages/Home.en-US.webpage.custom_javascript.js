@@ -1,6 +1,7 @@
-window.addEventListener("load", async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const overlay = document.getElementById("loadingOverlay");
   const statusText = document.getElementById("loadingStatusText");
+  if (ConnectHub.cache.has("training:dashboard")) overlay?.classList.add("hidden");
 
   const phraseBank = [
     "Waiting for response...",

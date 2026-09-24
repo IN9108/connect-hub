@@ -48,6 +48,13 @@ window.ConnectHub.cache = (() => {
   const lifetime = 15 * 60 * 1000;
   const prefix = () => window.currentContactId ? `connecthub:v1:${window.currentContactId}:` : "";
   return {
+    has(key) {
+      if (!prefix()) return false;
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(prefix() + key));
+        return !!saved && Date.now() - saved.time < lifetime;
+      } catch (_) { return false; }
+    },
     async get(key, load, force = false) {
       const storageKey = prefix() + key;
       let saved;
@@ -163,9 +170,11 @@ window.TrainingHub = {
 
     this._initPromise = (async () => {
       try {
+        const dashboard = /^\/(?:training\/?)?$/i.test(window.location.pathname);
         const serverResult = await ConnectHub.cache.get(
-          `training:${window.location.pathname.toLowerCase()}`,
-          () => this._callServer("init"),
+          dashboard ? "training:dashboard" : `training:${window.location.pathname.toLowerCase()}`,
+          () => this._callServer("init", "", dashboard
+            ? "/_api/serverlogics/TrainingHubMaster?action=init&currentPath=%2F" : null),
           force,
         );
 

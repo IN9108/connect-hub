@@ -3,22 +3,37 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     stories = await ConnectHub.cache.get("testimonies", async () => {
+      let published = [];
+      try {
+        const response = await fetch("/ai-testimonies.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`Failed to load testimonies: ${response.status}`);
+        published = await response.json();
+        if (!Array.isArray(published)) throw new Error("Published testimonies must contain an array.");
+      } catch (error) {
+        console.warn("Published testimonies are unavailable.", error);
+      }
       try {
         const result = await TrainingHub._callServer("testimonies");
-        if (Array.isArray(result.data) && result.data.length)
-          return result.data.map((item) => ({
+        if (Array.isArray(result.data)) {
+          const storiesByName = new Map(published.map((item) => [item.name, item]));
+          result.data.forEach((item) => {
+            if (String(item.crd38_name || "").trim().toLowerCase() === "test" &&
+                String(item.crd38_quote || "").trim().toLowerCase() === "test") return;
+            storiesByName.set(item.crd38_name, {
             name: item.crd38_name || "",
             quote: item.crd38_quote || "",
             paragraphs: String(item.crd38_paragraphs || "").split(/\n\s*\n/).filter(Boolean),
             tags: String(item.crd38_tags || "").split(",").map((tag) => tag.trim()).filter(Boolean),
             image: { data: item.crd38_imageurl || "" },
-          }));
+            });
+          });
+          return [...storiesByName.values()];
+        }
       } catch (error) {
-        console.warn("Live testimonies are unavailable; using published stories.", error);
+        console.warn("Live testimonies are unavailable.", error);
       }
-      const response = await fetch("/ai-testimonies.json", { cache: "no-store" });
-      if (!response.ok) throw new Error(`Failed to load testimonies: ${response.status}`);
-      return response.json();
+      if (published.length) return published;
+      throw new Error("No testimonies are available.");
     });
     if (!Array.isArray(stories)) throw new Error("Testimonies must contain an array.");
   } catch (error) {

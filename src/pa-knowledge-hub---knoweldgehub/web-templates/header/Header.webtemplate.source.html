@@ -54,6 +54,7 @@
                 <ul class="nav navbar-nav weblinks">
 
                     {% for link in primary_nav.weblinks %}
+                    {% unless link.name == 'Admin Dashboard' %}
 
                     {% if link.display_page_child_links %}
                             {% if link.url != null %}
@@ -96,7 +97,14 @@
 
                             </li>
 
+                    {% endunless %}
                     {% endfor %}
+
+                    {% if user.roles contains 'Administrators' %}
+                    <li class="nav-item weblink">
+                        <a aria-label="Admin Dashboard" href="/admin" class="nav-link">Admin</a>
+                    </li>
+                    {% endif %}
 
                     <li class="nav-item weblink">
                         <a aria-label="Prompt library" href="/training/prompt-library" class="nav-link">
