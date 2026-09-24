@@ -157,9 +157,10 @@
 
 </div>
 
-{% if page.breadcrumbs.size > 0 %}
+{% if page.breadcrumbs.size > 0 or page.title != 'Home' %}
 <nav class="hub-breadcrumb" aria-label="Breadcrumb">
     <ol>
+        {% if page.breadcrumbs.size == 0 %}<li><a href="/">Home</a></li>{% endif %}
         {% for crumb in page.breadcrumbs %}
         <li><a href="{{ crumb.url | h }}">{{ crumb.title | h }}</a></li>
         {% endfor %}

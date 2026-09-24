@@ -220,21 +220,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         const rowTrack = document.createElement("div");
         rowTrack.className = `floating-tags-track scroll-${direction}`;
 
-        const createTagSpans = (list) => {
+        const createTagButtons = (list) => {
           const fragment = document.createDocumentFragment();
 
           list.forEach((text) => {
-            const span = document.createElement("span");
-            span.textContent = text;
-            span.addEventListener("click", () => handleTagClick(text));
-            fragment.appendChild(span);
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = text;
+            button.addEventListener("click", () => handleTagClick(text));
+            fragment.appendChild(button);
           });
 
           return fragment;
         };
 
-        rowTrack.appendChild(createTagSpans(tags));
-        rowTrack.appendChild(createTagSpans(tags));
+        rowTrack.appendChild(createTagButtons(tags));
+        rowTrack.appendChild(createTagButtons(tags));
 
         const duration = Math.max(35, tags.length * 8);
         rowTrack.style.animationDuration = `${duration}s`;

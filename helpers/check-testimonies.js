@@ -20,6 +20,8 @@ const browser = {
   console,
 };
 const file = path.join(__dirname, "..", "src", "pa-knowledge-hub---knoweldgehub", "web-pages", "ai-testimonies", "content-pages", "AI-Testimonies.en-US.webpage.custom_javascript.js");
+const page = fs.readFileSync(file.replace("custom_javascript.js", "copy.html"), "utf8");
+assert(page.indexOf('id="floatingTagsWrapper"') > -1 && page.indexOf('id="floatingTagsWrapper"') < page.indexOf('class="stories-carousel"'));
 vm.runInNewContext(fs.readFileSync(file, "utf8"), browser);
 onReady().then(() => {
   assert.equal(stories.length, 2);

@@ -106,7 +106,7 @@ body {
   white-space: nowrap;
 }
 
-.floating-tags-track span {
+.floating-tags-track button {
   background: var(--card);
   border: 1px solid #e7ecf1;
   border-radius: 999px;
@@ -118,18 +118,22 @@ body {
   transition: all 0.3s ease;
   cursor: pointer;
   user-select: none;
+  font: inherit;
 }
 
-.floating-tags-track span:hover {
+.floating-tags-track button:hover {
   transform: translateY(-3px);
   background: var(--primary);
-  color: #fff;
+  color: #1f2929;
   border-color: var(--primary);
 }
 
 /* Pause track animation on hover */
-.floating-tags-row:hover .floating-tags-track {
+.floating-tags-row:is(:hover, :focus-within) .floating-tags-track {
   animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-tags-track { animation: none !important; }
 }
 
 /* Left & Right Animations */

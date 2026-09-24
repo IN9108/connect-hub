@@ -1611,17 +1611,17 @@ body {
   margin: 0 auto;
   padding: 30px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #1f2929, #2b3838);
-  border: 1px solid rgba(139, 197, 63, 0.2);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
 }
 
 .best-practice-panel h3 {
-  color: var(--primary);
+  color: var(--accent-text);
   margin-bottom: 15px;
 }
 
 .best-practice-panel p {
-  color: var(--muted) !important;
+  color: var(--text) !important;
   margin: 0;
 }
 
@@ -2093,6 +2093,9 @@ video {
   border-radius: 16px;
   box-shadow: none;
 }
+.dashboard-shell :is(.stat-card, .dashboard-card, .resource-card, .learning-path-card) {
+  border-left: 4px solid var(--primary);
+}
 .stat-number {
   color: var(--text);
   font-size: clamp(1.5rem, 3vw, 2.5rem);
@@ -2204,9 +2207,27 @@ video {
 }
 .training-section.center-content h2 { text-align: center; }
 .training-section .agent-launch-card { text-align: center; }
-.training-shell .dashboard-hero { flex-direction: column; align-items: center; text-align: center; gap: 24px; }
-.training-shell .hero-description { margin-inline: auto; }
-.training-shell .hero-right { justify-content: center; }
+.training-shell .dashboard-hero {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+  gap: 32px;
+  text-align: left;
+}
+.training-shell .dashboard-hero::before { content: none; }
+.training-shell .dashboard-hero h1 { color: var(--text) !important; margin-top: 0; }
+.training-shell .hero-description { color: var(--muted); }
+.training-shell .hero-stat-card {
+  width: auto;
+  height: auto;
+  min-width: 168px;
+  padding: 24px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.training-shell .hero-stat-number { color: var(--accent-text); }
+.training-shell .hero-stat-label { color: var(--muted); }
 .training-shell .section-heading { text-align: center; }
 .training-shell .role-refresh-container { justify-content: center; }
 .training-section h3,
@@ -2237,6 +2258,7 @@ video {
 .prompt-category h3 {
   color: #a4d866;
 }
+.training-card :is(strong, li) { color: #eef6ec; }
 .training-columns :is(p, li) {
   color: #eef6ec;
 }
