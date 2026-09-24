@@ -1,15 +1,20 @@
-gather context from the handoff file
+2026-09-24T11:29:00.1886404+00:00
+ServerLogic
+
+Error
+/\_api/serverlogics/TrainingHubMaster
+Script validation failed: prohibited pattern found - Pattern: with\s\*\(
 
-dark mode looks good, light mode should be the default though
+    2026-09-24T11:29:38.0700856+00:00
 
-on most pages theres a weird tiling issue with the like background green glow? i like it but it just retiles itself towards the bottom of the page and looks shit
+ServerLogic
+
+Error
+/\_api/serverlogics/AdminHubMaster
+Script validation failed: prohibited pattern found - Pattern: Function\s\*\(
 
-on the testimonies page the white fog effect on the floating tags looks weird in dark mode, also with the top row of floating tags the bottoms are being cut off
+remember that these server logic scripts have sensitive syntax. rework them to be safe compliant and functional.
 
-prompt library looks weird, the prompts have a lot of text but barely any space to express that fix that
+check with the solution that we have the needed tables and that all names are correct, if not fix.
 
-on the agents page if u hover over the steps in dark mode they go a weird highlight blinding white
-
-none of the actual functionality of the site is working, no data is loading etc and the admin page is hidden. fix all of those, INCLUDING editing the solution to optimise power automate flows, create new flows if needed, manage update delete or create tables where needed etc. it needs to be in a completely funcional state
-
-make no mistakes
+bring back the green line on the bottom of the header and top of the footer like our other site, that looks clean
