@@ -1,5 +1,15 @@
-I want you to abide by the global design rules. Completely redesign this entire website to be more aligned with the design of the other website MyInteract. Including dark mode, which you should add the feature to use. Spin up an astra medium agent for this
+gather context from the handoff file
 
-Seperately, fully rework the site and solution to once again be more closely aligned with MyInteract on a functional level. Update the flows, tables, server code, client code etc. Implement similar efficient caching systems. This is an old website and needs to be elevated to the same level as MyInteract both visually and functionally
+dark mode looks good, light mode should be the default though
 
-Make no mistakes
+on most pages theres a weird tiling issue with the like background green glow? i like it but it just retiles itself towards the bottom of the page and looks shit
+
+on the testimonies page the white fog effect on the floating tags looks weird in dark mode, also with the top row of floating tags the bottoms are being cut off
+
+prompt library looks weird, the prompts have a lot of text but barely any space to express that fix that
+
+on the agents page if u hover over the steps in dark mode they go a weird highlight blinding white
+
+none of the actual functionality of the site is working, no data is loading etc and the admin page is hidden. fix all of those, INCLUDING editing the solution to optimise power automate flows, create new flows if needed, manage update delete or create tables where needed etc. it needs to be in a completely funcional state
+
+make no mistakes
