@@ -1,0 +1,16 @@
+adx_accountrelationship: 
+adx_append: false
+adx_appendto: false
+adx_contactrelationship: 
+adx_create: false
+adx_delete: false
+adx_entitylogicalname: crd38_learningpath
+adx_entityname: Learning Path Read
+adx_entitypermission_webrole:
+- aaf12810-55a5-4d1f-9ab4-10046ac71c8d
+adx_entitypermissionid: fb713d0d-4da3-4c5d-8ea0-8ac955e862c3
+adx_parententitypermission: 
+adx_parentrelationship: 
+adx_read: true
+adx_scope: 756150000
+adx_write: false

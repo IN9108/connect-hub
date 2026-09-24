@@ -1,0 +1,31 @@
+.agent-launch-card {
+    background: linear-gradient(
+        135deg,
+        rgba(139, 197, 63, 0.15),
+        rgba(41, 184, 206, 0.15)
+    );
+    border: 1px solid rgba(139, 197, 63, 0.25);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: left;
+}
+
+.agent-badge {
+    display: inline-block;
+    background: #8bc53f;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+}
+
+.agent-launch-content h2 {
+    margin-bottom: 1rem;
+}
+
+.agent-launch-actions {
+    margin-top: 1.5rem;
+}

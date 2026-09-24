@@ -1,0 +1,124 @@
+[
+  {
+    "name": "Sarah Rowden",
+    "quote": "What used to take days now takes minutes.",
+    "paragraphs": [
+      "Sarah first used AI to create detailed performing arts lesson plans. Work that previously took days of preparation could now be completed in minutes.",
+      "She now relies on Copilot for professional emails, spelling and grammar support, training creation, Excel learning and analysing how her time is spent across projects."
+    ],
+    "tags": ["Planning", "Excel", "Dyslexia Support", "Time Saving"]
+  },
+  {
+    "name": "Mike Chatziminas",
+    "quote": "AI changed the way I think.",
+    "paragraphs": [
+      "Mike admits he was sceptical when AI first appeared and originally resisted using it.",
+      "After understanding what it could actually do, it became one of his favourite tools for research, learning, training creation and even planning holidays."
+    ],
+    "tags": ["Research", "Learning", "Training", "Travel Planning"]
+  },
+  {
+    "name": "Amy Veall",
+    "quote": "I use AI every single day.",
+    "paragraphs": [
+      "At home, Amy uses AI for gardening projects and DIY guidance, helping save thousands of pounds.",
+      "At work, it generates engagement ideas, incentives, posters, communications and Excel solutions in minutes."
+    ],
+    "tags": ["Engagement", "Posters", "Comms", "Garden Design"]
+  },
+  {
+    "name": "Katie Doran",
+    "quote": "Sometimes you just need something explained differently.",
+    "paragraphs": [
+      "Katie regularly uses AI to support coaching conversations and advisor development.",
+      "It helps simplify difficult topics and provides alternative approaches for objection handling and customer conversations."
+    ],
+    "tags": ["Coaching", "Development", "Objection Handling", "Learning"]
+  },
+  {
+    "name": "Gary Rodgus",
+    "quote": "It gives me more time for decisions, not data crunching.",
+    "paragraphs": [
+      "Gary uses Copilot daily to analyse information, summarise reports and solve Excel challenges.",
+      "The time saved can instead be spent reviewing findings, debating insights and making stronger business decisions."
+    ],
+    "tags": ["Data Analysis", "Insights", "Excel", "Decision Making"]
+  },
+  {
+    "name": "Abi Catterall",
+    "quote": "Copilot saves me around two hours every day.",
+    "paragraphs": [
+      "Abi uses Copilot to analyse data, build presentations and organise her workday.",
+      "Outside work, it helped her complete major DIY projects including a kitchen renovation and custom cupboards."
+    ],
+    "tags": ["PowerPoints", "Data Analysis", "Planning", "DIY"]
+  },
+  {
+    "name": "Oscar Taylor",
+    "quote": "It lets me focus more on helping people.",
+    "paragraphs": [
+      "Oscar uses Copilot to support complaint handling, draft communications and summarise complex discussions.",
+      "It helps turn information from multiple sources into clear, structured responses for customers."
+    ],
+    "tags": ["Complaints", "Case Handling", "Communications", "Problem Solving"]
+  },
+  {
+    "name": "Eleanor Whiteside",
+    "quote": "Many of the designs became part of the final result.",
+    "paragraphs": [
+      "When moving house, Eleanor used AI to visualise decorating ideas before spending money on renovations.",
+      "Design concepts, colour recommendations and styling ideas helped her make decorating decisions with confidence."
+    ],
+    "tags": [
+      "Interior Design",
+      "Colour Schemes",
+      "Moving House",
+      "Visualisation"
+    ]
+  },
+  {
+    "name": "Katie Winstanley",
+    "quote": "It helps me inspire, support and lead my team every day.",
+    "paragraphs": [
+      "Katie relies on AI to streamline key management tasks, regularly using it to design eye-catching posters for team incentives.",
+      "It has also become an invaluable sounding board for crafting clear, impactful development plans and tailored objectives during 1:1 sessions."
+    ],
+    "tags": ["Incentives", "Team 1:1s", "Posters", "People Development"]
+  },
+  {
+    "name": "George Winter",
+    "quote": "It's like having a second pair of eyes on every customer conversation.",
+    "paragraphs": [
+      "George uses AI-assisted call transcripts to quickly review customer interactions against agreed objectives and coaching points.",
+      "Instead of manually searching through long calls, he can focus on identifying strengths, opportunities and meaningful coaching conversations."
+    ],
+    "tags": ["Coaching", "Call Reviews", "Quality", "Time Saving"]
+  },
+  {
+    "name": "Jessica Ball",
+    "quote": "Copilot helps me spend less time on admin and more time supporting people.",
+    "paragraphs": [
+      "Jess regularly uses Copilot Premium to summarise meetings, translate conversations between languages and organise key discussion points.",
+      "It also helps her draft documents, review wording and explore best practice guidance, making it easier to create clear and consistent communications."
+    ],
+    "tags": ["Meeting Notes", "Translation", "Documents", "Communications"]
+  },
+  {
+    "name": "Taylor Anderton",
+    "quote": "What once took an hour can now be reviewed in minutes.",
+    "paragraphs": [
+      "Taylor uses AI-powered transcripts and summaries to support complaint handling and case reviews, helping quickly identify key themes and customer concerns.",
+      "By reducing the time spent searching through conversations, more time can be focused on delivering timely resolutions and improving the customer experience."
+    ],
+    "tags": ["Complaints", "Transcripts", "Customer Experience", "Efficiency"]
+  },
+  {
+    "name": "Ashley Ncube",
+    "quote": "The insights help me make every coaching conversation more meaningful.",
+    "paragraphs": [
+      "Ash uses AI to analyse coaching themes across multiple customer interactions, helping highlight common strengths, trends and development opportunities.",
+      "It also supports the creation of learning activities, quizzes and knowledge checks tailored to specific topics and coaching objectives."
+    ],
+    "tags": ["Coaching", "Learning", "Quality Insights", "Knowledge Checks"]
+  }
+]

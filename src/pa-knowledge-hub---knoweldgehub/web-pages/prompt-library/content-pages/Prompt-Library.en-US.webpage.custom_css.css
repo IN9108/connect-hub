@@ -1,0 +1,395 @@
+/* ==========================================
+   PROMPT LIBRARY PAGE
+   ========================================== */
+
+.prompt-library-page {
+  width: 100%;
+  padding: 40px 2vw;
+  box-sizing: border-box;
+}
+
+.training-section {
+  margin-bottom: 70px;
+  width: 100%;
+}
+
+.center-content {
+  text-align: center;
+}
+
+/* ==========================================
+   HERO SECTION
+   ========================================== */
+
+.training-hero {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 60px;
+  transition: margin-bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.training-hero.is-searching {
+  margin-bottom: 24px;
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(139, 197, 63, 0.12);
+  border: 1px solid rgba(139, 197, 63, 0.25);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+.pill-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--primary);
+  border-radius: 50%;
+}
+
+.training-hero h1 {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 16px;
+}
+
+.prompt-hero-actions {
+  margin-top: 36px;
+  display: flex;
+  justify-content: center;
+}
+
+.prompt-search {
+  width: 100%;
+  max-width: 700px;
+  padding: 18px 24px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: white;
+  font-size: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+.prompt-search:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 4px rgba(139, 197, 63, 0.12),
+    var(--shadow-md);
+}
+
+/* ==========================================
+   OVERVIEW METRICS (Constrained Width)
+   ========================================== */
+
+.prompt-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1000px; /* Prevents cards from stretching full width */
+  margin: 0 auto 70px;
+  transition:
+    margin 0.4s ease,
+    padding 0.4s ease;
+}
+
+.prompt-overview-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.prompt-overview-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(139, 197, 63, 0.25);
+}
+
+.overview-number {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.overview-label {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* ==========================================
+   PROMPT LIBRARY GRID (Full Width Grid)
+   ========================================== */
+
+.prompt-library-header h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.prompt-library-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* Spans across screen in 4 columns */
+  gap: 24px;
+  width: 100%;
+  margin-top: 28px;
+  box-sizing: border-box;
+}
+
+.prompt-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.prompt-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.prompt-card-tag {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(139, 197, 63, 0.12);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.prompt-card h3 {
+  margin-top: 12px;
+  font-size: 1.6rem;
+}
+
+.prompt-example {
+  margin: 16px 0;
+  padding: 16px;
+  border-left: 3px solid var(--primary);
+  border-radius: 0 12px 12px 0;
+  background: #f8fafc;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  color: #334155;
+  flex-grow: 1;
+}
+
+.copy-prompt-btn {
+  width: 100%;
+  border: none;
+  background: var(--primary);
+  color: #1f2929;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-prompt-btn:hover {
+  transform: translateY(-1px);
+}
+
+.copy-prompt-btn:active {
+  transform: translateY(0);
+}
+
+.copy-success {
+  background: #22c55e !important;
+  color: white !important;
+}
+
+.prompt-highlight {
+  border-color: var(--primary) !important;
+}
+
+.prompt-focus {
+  border-color: var(--primary) !important;
+  transform: translateY(-8px) !important;
+  box-shadow:
+    0 0 0 3px rgba(139, 197, 63, 0.15),
+    var(--shadow-md) !important;
+}
+
+/* ==========================================
+   SUBMISSION SECTION
+   ========================================== */
+.best-practice-panel {
+  background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+  border: 1px dashed var(--primary);
+  border-radius: 24px;
+  padding: 48px;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.best-practice-panel h3 {
+  font-size: 1.6rem;
+  margin-bottom: 12px;
+}
+
+.best-practice-panel p {
+  color: var(--muted);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.submit-prompt-btn {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  padding: 14px 32px;
+  border-radius: 99px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.submit-prompt-btn:hover {
+  background: var(--primary-dark);
+  color: #1f2929;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ==========================================
+   SQUASH & ACCORDION COLLAPSE
+   ========================================== */
+
+.collapsible-wrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.collapsible-inner {
+  overflow: hidden;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  transform-origin: top center;
+  opacity: 1;
+}
+
+.collapsible-wrapper.is-collapsed {
+  grid-template-rows: 0fr;
+}
+
+.collapsible-wrapper.is-collapsed .collapsible-inner {
+  opacity: 0;
+  transform: scaleY(0);
+}
+
+.collapsible-wrapper.is-collapsed .prompt-overview,
+.collapsible-wrapper.is-collapsed .training-section {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.training-section {
+  max-width: 100vw !important;
+}
+
+/* ==========================================
+   RESPONSIVE BREAKPOINTS
+   ========================================== */
+
+@media (max-width: 1600px) {
+  .prompt-library-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .prompt-library-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .prompt-library-grid,
+  .prompt-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .training-hero h1 {
+    font-size: 2rem;
+  }
+
+  .best-practice-panel {
+    padding: 32px 24px;
+  }
+}
+
+/* Filter Container */
+.category-filter-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+/* Filter Buttons */
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid #d0d5dd;
+  background-color: #ffffff;
+  color: #344054;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  background-color: #f2f4f7;
+  border-color: #98a2b3;
+}
+
+.filter-btn.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* Hide filtered-out cards */
+.prompt-card.is-hidden {
+  display: none !important;
+}

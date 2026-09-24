@@ -1,0 +1,292 @@
+<div class="training-hero branding-module-hero">
+
+
+    <h1>
+        Understanding Branding Kits
+    </h1>
+
+    <p>
+        Learn what branding kits are, why they matter and how they help you create
+        professional, consistent content across the Microsoft ecosystem.
+    </p>
+
+</div>
+
+<section class="training-section center-content">
+    <h2>What Is A Branding Kit?</h2>
+
+    <p>
+        Branding kits are managed by Microsoft administrators and provide Copilot
+        with approved company branding assets and instructions.
+    </p>
+
+    <p>
+        These kits contain approved templates, colours, fonts, logos and visual
+        standards which Copilot can use when generating content.
+    </p>
+
+    <div class="branding-highlight-card">
+
+    <div class="branding-highlight-icon">
+
+        <svg viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2">
+            <path d="M3 7h18M7 3v18"/>
+        </svg>
+
+    </div>
+
+
+        <div>
+            <h3>Think Of It As A Brand Playbook</h3>
+
+            <p>
+                A branding kit gives Copilot clear instructions on how Interact
+                content should look and feel, ensuring generated content remains
+                visually consistent and professionally branded.
+            </p>
+        </div>
+
+    </div>
+
+</section>
+
+<section class="training-grid center-content">
+
+    <div class="training-card">
+
+        <h3>Templates</h3>
+
+        <p>
+            PowerPoint, Word, Excel and Designer templates can be included so
+            generated content follows approved company layouts.
+        </p>
+
+    </div>
+
+    <div class="training-card">
+
+        <h3>Fonts</h3>
+
+        <p>
+            Branding kits specify approved typography to maintain consistency,
+            readability and accessibility.
+        </p>
+
+    </div>
+
+    <div class="training-card">
+
+        <h3>Colours</h3>
+
+        <p>
+            Approved brand colour palettes are made available for use across
+            generated presentations, documents and imagery.
+        </p>
+
+    </div>
+
+</section>
+
+<section class="training-section center-content">
+
+    <h2>Why Branding Kits Matter</h2>
+
+    <p>
+        Branding kits deliver three critical business benefits:
+    </p>
+
+    <div class="training-columns whiteText">
+
+        <div>
+
+            <h3>Save Time</h3>
+
+            <p>
+                Spend less time formatting documents, presentations and visual
+                assets manually.
+            </p>
+
+        </div>
+
+        <div>
+
+            <h3>Improve Consistency</h3>
+
+            <p>
+                Ensure content looks aligned regardless of who creates it.
+            </p>
+
+        </div>
+
+        <div>
+
+            <h3>Professional Output</h3>
+
+            <p>
+                Use approved branding standards across Microsoft applications.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+<section class="training-section center-content">
+
+    <h2>What Can Branding Kits Control?</h2>
+
+    <div class="branding-feature-grid">
+
+        <div class="branding-feature">
+            <span class="branding-feature-number">01</span>
+            <h3>Templates</h3>
+            <p>Approved layouts and document structures.</p>
+        </div>
+
+        <div class="branding-feature">
+            <span class="branding-feature-number">02</span>
+            <h3>Logos</h3>
+            <p>Approved company logos and placement guidance.</p>
+        </div>
+
+        <div class="branding-feature">
+            <span class="branding-feature-number">03</span>
+            <h3>Colours</h3>
+            <p>Primary and secondary company colour palettes.</p>
+        </div>
+
+        <div class="branding-feature">
+            <span class="branding-feature-number">04</span>
+            <h3>Typography</h3>
+            <p>Approved fonts for readability and brand consistency.</p>
+        </div>
+
+    </div>
+
+</section>
+
+<section class="training-section center-content">
+
+    <h2>Quick Knowledge Check</h2>
+
+    <div class="knowledge-check-card">
+
+        <h3>
+            Why should you use a branding kit?
+        </h3>
+
+        <div class="knowledge-options">
+
+            <button class="knowledge-option"
+                    data-correct="false"
+                    onclick="brandingKnowledgeCheck(this)">
+                To make every document look different
+            </button>
+
+            <button class="knowledge-option"
+                    data-correct="true"
+                    onclick="brandingKnowledgeCheck(this)">
+                To save time and maintain brand consistency
+            </button>
+
+            <button class="knowledge-option"
+                    data-correct="false"
+                    onclick="brandingKnowledgeCheck(this)">
+                To replace Microsoft Office templates entirely
+            </button>
+
+        </div>
+
+        <div class="knowledge-result"
+             id="brandingKnowledgeResult">
+        </div>
+
+    </div>
+
+</section>
+
+<div class="training-complete"
+     id="moduleCompletePanel"
+     style="display:none;">
+
+     <section class="training-complete center-content">
+
+    <h2>
+        Module Complete
+    </h2>
+
+    <p>
+        You now understand what branding kits are and why they are important.
+        In the next module you'll learn how to access and use branding kits when
+        creating content with a Premium Copilot licence.
+    </p>
+
+</section>
+
+    <h2>
+        Next Step
+    </h2>
+
+    <a href="#"
+       class="training-button"
+       id="completeModule">
+        Complete Module & Continue
+    </a>
+
+
+
+</section>
+
+<script>
+
+function brandingKnowledgeCheck(selectedButton) {
+
+    const result =
+        document.getElementById("brandingKnowledgeResult");
+
+    const completePanel =
+        document.getElementById("moduleCompletePanel");
+
+    const options =
+        selectedButton.parentElement.querySelectorAll(".knowledge-option");
+
+    const isCorrect =
+        selectedButton.dataset.correct === "true";
+
+    options.forEach(option => {
+
+        option.disabled = true;
+
+        if (option.dataset.correct === "true") {
+            option.classList.add("correct");
+        }
+
+    });
+
+    if (!isCorrect) {
+
+        selectedButton.classList.add("incorrect");
+
+        result.innerHTML =
+            "Not quite. The correct answer is <strong>To save time and maintain brand consistency.</strong>";
+
+    } else {
+
+        result.innerHTML =
+            "Correct. Branding kits help save time while ensuring content remains consistent and professionally branded.";
+
+    }
+
+    completePanel.style.display = "block";
+
+    setTimeout(() => {
+        completePanel.classList.add("visible");
+    }, 50);
+
+}
+
+</script>

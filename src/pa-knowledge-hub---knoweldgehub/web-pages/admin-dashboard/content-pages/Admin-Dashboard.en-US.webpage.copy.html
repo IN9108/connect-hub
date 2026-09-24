@@ -1,0 +1,204 @@
+<link
+  rel="stylesheet"
+  href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css"
+/>
+
+<div class="dashboard-shell admin-shell">
+  <section class="dashboard-hero">
+    <div class="hero-content">
+      <div class="hero-label">Administration Centre</div>
+
+      <h1>Knowledge Hub Admin</h1>
+
+      <p class="hero-description">
+        Create learning journeys, build training modules, publish AI testimonies
+        and manage platform content from a single location.
+      </p>
+    </div>
+  </section>
+
+  <section class="dashboard-stats">
+    <div class="stat-card">
+      <span class="stat-number">0</span>
+      <span class="stat-label">Learning Journeys</span>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-number">0</span>
+      <span class="stat-label">Training Modules</span>
+    </div>
+
+    <div class="stat-card">
+      <span class="stat-number">0</span>
+      <span class="stat-label">AI Testimonies</span>
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <div class="section-heading">
+      <span class="section-kicker">Learning Management</span>
+
+      <h2>Create &amp; Manage Learning</h2>
+
+      <p>Build learning journeys and manage all training content.</p>
+    </div>
+
+    <div class="admin-action-grid">
+      <div class="admin-action-card">
+        <div class="admin-action-icon green">
+          <i class="fi fi-rr-route"></i>
+        </div>
+
+        <h3>Manage Learning Journeys</h3>
+
+        <p>
+          Create, edit, reorder, delete and inspect modules within learning
+          journeys.
+        </p>
+
+        <button class="training-button" data-modal-type="learningPaths">
+          Open Workspace
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <div class="section-heading">
+      <span class="section-kicker">Content Management</span>
+
+      <h2>Create &amp; Manage Content</h2>
+
+      <p>Manage all site content.</p>
+    </div>
+
+    <div class="admin-action-grid">
+      <div class="admin-action-card">
+        <div class="admin-action-icon purple">
+          <i class="fi fi-rr-quote-right"></i>
+        </div>
+
+        <h3>Manage AI Testimonies</h3>
+
+        <p>Edit, retire, reorder and maintain published AI testimonies.</p>
+
+        <button class="training-button" data-modal-type="testimonies">
+          Open Workspace
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <div class="section-heading">
+      <span class="section-kicker">Administration Overview</span>
+
+      <h2>Recent Activity</h2>
+
+      <p>Quickly access the latest administrative activity and changes.</p>
+    </div>
+
+    <div class="dashboard-card">
+      <div id="recentActivity"></div>
+    </div>
+  </section>
+</div>
+
+<div id="adminModal" class="admin-modal" aria-hidden="true">
+  <div class="admin-modal-overlay" data-close-modal></div>
+
+  <div class="admin-modal-container">
+    <div class="admin-workspace-header">
+      <div class="workspace-header-content">
+        <div class="workspace-badge">
+          <i class="fi fi-rr-apps"></i>
+          <span id="workspaceType">Learning Management</span>
+        </div>
+
+        <div>
+          <h2 id="modalTitle">Learning Journey Workspace</h2>
+
+          <p id="modalSubtitle">
+            Create, organise and maintain learning journeys.
+          </p>
+        </div>
+      </div>
+
+      <div class="workspace-actions">
+        <div class="workspace-search">
+          <i class="fi fi-rr-search"></i>
+
+          <input
+            id="workspaceSearch"
+            type="text"
+            placeholder="Search records..."
+          />
+        </div>
+
+        <button id="workspaceCreateBtn" class="training-button">
+          <i class="fi fi-rr-plus"></i>
+          Create New
+        </button>
+
+        <button class="modal-close-btn" data-close-modal aria-label="Close">
+          <i class="fi fi-rr-cross-small"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="admin-workspace-stats">
+      <div class="workspace-stat-pills">
+        <div class="workspace-stat">
+          <span id="workspaceTotalCount">0</span>
+          <label>Total Records</label>
+        </div>
+
+        <div class="workspace-stat">
+          <span id="workspaceActiveCount">0</span>
+          <label>Active</label>
+        </div>
+      </div>
+
+      <div class="workspace-filter-chips">
+        <button class="filter-chip active">All</button>
+        <button class="filter-chip">Active</button>
+      </div>
+    </div>
+
+    <div class="admin-workspace-layout">
+      <aside class="admin-sidebar">
+        <div class="sidebar-section">
+          <h3>Navigation</h3>
+
+          <button class="sidebar-item active" data-nav="learningPaths">
+            <i class="fi fi-rr-route"></i>
+            Learning Journeys
+          </button>
+
+          <button class="sidebar-item" data-nav="testimonies">
+            <i class="fi fi-rr-quote-right"></i>
+            AI Testimonies
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <h3>Quick Actions</h3>
+
+          <button class="sidebar-item" id="sidebarActionCreate">
+            <i class="fi fi-rr-plus"></i>
+            Create New
+          </button>
+
+          <button class="sidebar-item">
+            <i class="fi fi-rr-copy"></i>
+            Duplicate Selected
+          </button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <div id="modalBody" class="admin-workspace-grid"></div>
+      </main>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,51 @@
+<div class="dashboard-shell">
+  <div class="dashboard-hero">
+    <div class="hero-left">
+      <p class="hero-label">AI &amp; Automation Hub</p>
+      <h1>Training Hub</h1>
+      <p class="hero-description">
+        Complete learning journeys, track progress, and unlock advanced content
+        as you build your knowledge.
+      </p>
+    </div>
+
+    <div class="hero-right">
+      <div class="hero-stat-card">
+        <span class="hero-stat-number" id="progressPercentage"> 0% </span>
+        <span class="hero-stat-label"> Total Progress </span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: none">
+    <div id="progressFill"></div>
+    <div id="progressText"></div>
+  </div>
+
+  <div class="dashboard-section">
+    <div class="role-refresh-container">
+      <span class="role-refresh-text"> Not seeing the correct training? </span>
+
+      <button id="refreshRoleButton" class="role-refresh-btn">
+        Refresh My Role
+      </button>
+    </div>
+    <div class="section-heading">
+      <h2>Your Learning journeys</h2>
+      <p>
+        Structured paths generated directly from your account progress and
+        assigned requirements.
+      </p>
+    </div>
+
+    <div id="dynamicLearningPathsContainer" class="resource-grid">
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <div class="loading-title">Loading learning journeys...</div>
+        <div class="loading-subtitle">
+          Syncing your personalised training content...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

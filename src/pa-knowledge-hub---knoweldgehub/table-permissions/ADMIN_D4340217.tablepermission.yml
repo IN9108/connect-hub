@@ -1,0 +1,16 @@
+adx_accountrelationship: 
+adx_append: true
+adx_appendto: true
+adx_contactrelationship: 
+adx_create: true
+adx_delete: true
+adx_entitylogicalname: crd38_learningpath
+adx_entityname: ADMIN
+adx_entitypermission_webrole:
+- 751daad9-dcdc-4338-8a93-eb269826fab3
+adx_entitypermissionid: 05db1a15-ef89-48c9-9f60-714e176f4ac4
+adx_parententitypermission: 
+adx_parentrelationship: 
+adx_read: true
+adx_scope: 756150000
+adx_write: true

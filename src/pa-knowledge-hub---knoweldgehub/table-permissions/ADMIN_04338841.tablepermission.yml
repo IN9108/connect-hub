@@ -1,0 +1,16 @@
+adx_accountrelationship: 
+adx_append: true
+adx_appendto: false
+adx_contactrelationship: 
+adx_create: true
+adx_delete: true
+adx_entitylogicalname: crd38_aitestimony
+adx_entityname: ADMIN
+adx_entitypermission_webrole:
+- 751daad9-dcdc-4338-8a93-eb269826fab3
+adx_entitypermissionid: 34178168-ab6d-4d12-8ef5-9554f4708488
+adx_parententitypermission: 
+adx_parentrelationship: 
+adx_read: true
+adx_scope: 756150000
+adx_write: true

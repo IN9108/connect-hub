@@ -1,0 +1,153 @@
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <h3 class="main-loading-title">Setting up your learning workspace</h3>
+    <p id="loadingStatusText" class="loading-subtext">
+      Requesting your data...
+    </p>
+  </div>
+</div>
+
+<div class="dashboard-shell">
+  <section class="dashboard-hero">
+    <div class="hero-content">
+      <span class="hero-label"> AI & Automation Learning Hub </span>
+      <h1>Welcome back, {{ user.firstname }}</h1>
+      <p class="hero-description">
+        Continue building your AI, Copilot and automation skills through guided
+        learning journeys, practical resources and approved tools.
+      </p>
+      <div class="hero-actions">
+        <a href="/training" class="primary-btn"> Continue Learning </a>
+        <a href="training/AI-Testimonies/" class="secondary-btn">
+          How we use AI
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-progress-panel">
+      <div class="hero-progress-circle" id="overallPercentageCircle">
+        <span id="overallPercentage">0%</span>
+      </div>
+      <span class="hero-progress-label"> Overall Progress </span>
+    </div>
+  </section>
+
+  <section class="dashboard-stats">
+    <div class="stat-card">
+      <div class="stat-top">
+        <span id="completedModules" class="stat-number">0</span>
+      </div>
+      <span class="stat-label"> Modules Completed </span>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-top">
+        <span id="remainingModules" class="stat-number">0</span>
+      </div>
+      <span class="stat-label"> Modules Remaining </span>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-top">
+        <span id="resourceCount" class="stat-number">0</span>
+      </div>
+      <span class="stat-label"> Resources Viewed </span>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-top">
+        <span id="completionBadge" class="stat-number">Beginner</span>
+      </div>
+      <span class="stat-label"> Learning Level </span>
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <div id="dynamicResourcesContainer" class="resource-grid">
+      <div class="loading-state">Loading tools and materials...</div>
+    </div>
+  </section>
+
+  <section class="dashboard-feature-grid">
+    <div class="dashboard-card feature-card">
+      <span class="section-kicker"> Last Activity </span>
+      <h2>Recent Learning</h2>
+      <p id="recentActivityText">Loading...</p>
+    </div>
+
+    <div class="dashboard-card feature-card">
+      <span class="section-kicker"> Recommended Next Step </span>
+      <h2>Continue Learning</h2>
+      <p id="nextStepText">Loading...</p>
+      <div style="margin-top: 15px">
+        <a href="/training" class="primary-btn" id="nextStepButton">
+          Continue
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <div class="section-heading">
+      <h2>Active Learning Journey</h2>
+      <p>Continue your current learning journey and monitor completion.</p>
+    </div>
+
+    <a href="/training" class="learning-path-card" style="display: block">
+      <div class="path-header">
+        <div>
+          <h3 id="dynamicPathTitle">Loading Path...</h3>
+          <p id="dynamicPathDesc">...</p>
+        </div>
+        <span id="trainingStatus" class="status-pill"> In Progress </span>
+      </div>
+
+      <div class="path-progress">
+        <div class="path-progress-top">
+          <span> Progress </span>
+          <span id="trainingPercentage"> 0% </span>
+        </div>
+        <div class="progress-bar">
+          <div id="trainingFill" class="progress-fill"></div>
+        </div>
+      </div>
+    </a>
+  </section>
+
+  <section class="dashboard-section">
+    <div class="section-heading">
+      <h2>Learning Journey Breakdown</h2>
+      <p>Track completion of individual modules within your journey.</p>
+    </div>
+
+    <div class="dashboard-card">
+      <div id="learningPathDetails">
+        <div class="loading-state">Loading learning items...</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div
+  class="row sectionBlockLayout text-start"
+  style="
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    min-height: auto;
+    padding: 8px;
+  "
+>
+  <div class="container" style="padding: 0; display: flex; flex-wrap: wrap">
+    <div
+      class="col-lg-12 columnBlockLayout"
+      style="
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 250px;
+      "
+    ></div>
+  </div>
+</div>

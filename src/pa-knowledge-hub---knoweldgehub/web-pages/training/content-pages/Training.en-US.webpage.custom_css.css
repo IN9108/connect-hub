@@ -1,0 +1,26 @@
+.path-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.path-duration {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 8px 14px;
+
+  background: #f8fafc;
+  border: 1px solid var(--border);
+
+  border-radius: 999px;
+
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.path-duration::before {
+  content: "⏱";
+  margin-right: 6px;
+}

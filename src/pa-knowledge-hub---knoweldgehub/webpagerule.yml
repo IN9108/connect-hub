@@ -1,0 +1,36 @@
+- adx_name: Grant Change to Content
+  adx_right: 1
+  adx_webpageaccesscontrolruleid: 08ff614e-4299-48b7-b171-cb358b44ec6c
+- adx_name: Grant Change to Administrators
+  adx_right: 1
+  adx_webpageaccesscontrolrule_webrole:
+  - 751daad9-dcdc-4338-8a93-eb269826fab3
+  adx_webpageaccesscontrolruleid: 8385ea1e-c73e-417c-a5db-27f10a3ffe83
+  adx_webpageid: eece42cc-a711-493c-9c43-066ec010cd14
+- adx_name: Restrict Read on Home
+  adx_right: 2
+  adx_scope: 1
+  adx_webpageaccesscontrolrule_webrole:
+  - 751daad9-dcdc-4338-8a93-eb269826fab3
+  - aaf12810-55a5-4d1f-9ab4-10046ac71c8d
+  adx_webpageaccesscontrolruleid: 89bf1c3d-caaf-948b-cded-77dece5702dc
+  adx_webpageid: eece42cc-a711-493c-9c43-066ec010cd14
+- adx_name: Restrict Read on Sign In
+  adx_right: 2
+  adx_scope: 2
+  adx_webpageaccesscontrolrule_webrole: []
+  adx_webpageaccesscontrolruleid: aa0a574b-4622-b88a-fdb3-1b82a15447e6
+  adx_webpageid: 66cbac00-e549-cf65-6097-9eb4f432af98
+- adx_name: Restrict Read on Admin Dashboard
+  adx_right: 2
+  adx_scope: 1
+  adx_webpageaccesscontrolrule_webrole:
+  - 751daad9-dcdc-4338-8a93-eb269826fab3
+  adx_webpageaccesscontrolruleid: b9471a90-e29d-fd4b-4468-adfc62000565
+  adx_webpageid: 61752e22-a75e-baa2-bf3e-769d9ca49eaa
+- adx_name: Restrict Read on Login Failed
+  adx_right: 2
+  adx_scope: 2
+  adx_webpageaccesscontrolrule_webrole: []
+  adx_webpageaccesscontrolruleid: e1a6d918-d103-559b-6561-248da75afe8c
+  adx_webpageid: cf6bd8ce-676e-4cc2-ed58-9b8cb20d5914

@@ -1,0 +1,36 @@
+.auth-container {
+    max-width: 700px;
+    margin: 80px auto;
+    padding: 20px;
+}
+
+.auth-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px;
+    color: #111 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,.1);
+}
+
+.auth-card.error {
+    border-left: 6px solid #d13438;
+}
+
+.auth-card h1 {
+    color: #111 !important;
+    margin-bottom: 20px;
+}
+
+.auth-card p {
+    color: #111 !important;
+}
+
+.auth-button {
+    display: inline-block;
+    background: #8bd400;
+    color: #111;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+}

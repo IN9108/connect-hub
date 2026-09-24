@@ -1,0 +1,619 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(139, 212, 0, 0.15),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(139, 212, 0, 0.12),
+      transparent 35%
+    ),
+    linear-gradient(180deg, #f8fff2 0%, #ffffff 45%, #f5f8fb 100%);
+}
+
+/* =====================================================
+   PAGE
+===================================================== */
+
+.stories-page {
+  width: 100%;
+  position: relative;
+}
+
+/* =====================================================
+   HERO
+===================================================== */
+
+.hero-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 90px 24px 70px;
+  text-align: center;
+}
+
+.hero-pill {
+  display: inline-block;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: rgba(139, 212, 0, 0.12);
+  color: #6d9f07;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 28px;
+}
+
+.hero-section h1 {
+  font-size: clamp(3rem, 5.5vw, 5.5rem);
+  line-height: 0.95;
+  font-weight: 900;
+  letter-spacing: -3px;
+  color: #1b1b1b;
+  margin-bottom: 24px;
+}
+
+.hero-copy {
+  max-width: 850px;
+  margin: 0 auto 40px;
+  font-size: 1.2rem;
+  line-height: 1.9;
+  color: #666;
+}
+
+/* =====================================================
+   FLOATING TAGS (DYNAMIC SCROLLING)
+===================================================== */
+
+.floating-tags-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+  margin-top: 30px;
+  padding: 10px 0;
+}
+
+/* Gradient fade on the sides */
+.floating-tags-wrapper::before,
+.floating-tags-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 120px;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.floating-tags-wrapper::before {
+  left: 0;
+  background: linear-gradient(90deg, #f8fff2 0%, rgba(248, 255, 242, 0) 100%);
+}
+
+.floating-tags-wrapper::after {
+  right: 0;
+  background: linear-gradient(-90deg, #f8fff2 0%, rgba(248, 255, 242, 0) 100%);
+}
+
+.floating-tags-row {
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+}
+
+.floating-tags-track {
+  display: flex;
+  gap: 14px;
+  width: max-content;
+  white-space: nowrap;
+}
+
+.floating-tags-track span {
+  background: #fff;
+  border: 1px solid #e7ecf1;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #444;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.floating-tags-track span:hover {
+  transform: translateY(-3px);
+  background: #8bd400;
+  color: #fff;
+  border-color: #8bd400;
+}
+
+/* Pause track animation on hover */
+.floating-tags-row:hover .floating-tags-track {
+  animation-play-state: paused;
+}
+
+/* Left & Right Animations */
+.floating-tags-track.scroll-left {
+  animation: tagScrollLeft linear infinite;
+}
+
+.floating-tags-track.scroll-right {
+  animation: tagScrollRight linear infinite;
+}
+
+@keyframes tagScrollLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes tagScrollRight {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.story-rail-header {
+  text-align: center;
+  max-width: 1000px;
+  margin: 0 auto 40px;
+  padding: 0 20px;
+}
+
+.story-rail-header h2 {
+  font-size: 2.5rem;
+  color: #202020;
+  margin-bottom: 15px;
+}
+
+.story-rail-header p {
+  color: #666;
+  line-height: 1.8;
+}
+
+/* =====================================================
+   CAROUSEL
+===================================================== */
+
+.stories-carousel {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  padding: 30px 0 80px;
+  scroll-behavior: smooth;
+}
+
+.stories-carousel::before,
+.stories-carousel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 180px;
+  height: 100%;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.stories-carousel::before {
+  left: 0;
+  background: linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.stories-carousel::after {
+  right: 0;
+  background: linear-gradient(-90deg, #ffffff 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.stories-track {
+  display: flex;
+  gap: 28px;
+  width: max-content;
+  animation: testimonialScroll 85s linear infinite;
+}
+
+.stories-carousel:hover .stories-track {
+  animation-play-state: paused;
+}
+
+@keyframes testimonialScroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* =====================================================
+   STORY CARD
+===================================================== */
+
+.story-panel {
+  flex: 0 0 480px;
+  min-height: 560px;
+  background: #fff;
+  border-radius: 34px;
+  padding: 35px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #edf2f5;
+
+  box-shadow:
+    0 20px 45px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.03);
+
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.story-panel:hover {
+  transform: translateY(-12px) scale(1.02);
+
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.14);
+}
+
+.story-panel:nth-child(3n) {
+  margin-top: 30px;
+}
+
+.story-panel::before {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  right: -120px;
+  top: -120px;
+  border-radius: 50%;
+  background: rgba(139, 212, 0, 0.08);
+}
+
+/* =====================================================
+   COLOURED CARDS
+===================================================== */
+
+.story-panel.green {
+  background: linear-gradient(135deg, #8bd400, #9fe51a);
+}
+
+.story-panel.green .person-name,
+.story-panel.green .big-quote,
+.story-panel.green p {
+  color: white;
+}
+
+.story-panel.green .story-tags span {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.story-panel.green .story-expand {
+  background: white;
+  color: #6c9d06;
+}
+
+.story-panel.dark {
+  background: linear-gradient(135deg, #202934, #313f4d);
+}
+
+.story-panel.dark .person-name,
+.story-panel.dark .big-quote,
+.story-panel.dark p {
+  color: white;
+}
+
+.story-panel.dark .story-tags span {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.story-panel.dark .story-expand {
+  background: white;
+  color: #202934;
+}
+
+/* =====================================================
+   PERSON ICON & AVATAR IMAGE UPDATES
+===================================================== */
+
+.person-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%; /* Rounded circle avatar */
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 22px;
+  position: relative;
+  z-index: 2;
+  overflow: hidden; /* Clips non-square avatar images to circle */
+}
+
+.person-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.person-icon.image-failed {
+  /* Fallback styling when image breaks or fails to load */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.story-panel:not(.green):not(.dark) .person-icon {
+  background: #8bd400;
+}
+
+/* =====================================================
+   TEXT
+===================================================== */
+
+.person-name {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: #8bd400;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 2;
+}
+
+.big-quote {
+  font-size: 2.5rem;
+  font-weight: 900;
+  line-height: 1.05;
+  color: #1f1f1f;
+  margin-bottom: 22px;
+  position: relative;
+  z-index: 2;
+}
+
+.story-panel p {
+  color: #555;
+  line-height: 1.85;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 2;
+}
+
+/* =====================================================
+   TAGS
+===================================================== */
+
+.story-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+  margin-bottom: 25px;
+  position: relative;
+  z-index: 2;
+}
+
+.story-tags span {
+  border: 1px solid #e4eaee;
+  background: #f7fafc;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #444;
+}
+
+/* =====================================================
+   BUTTON
+===================================================== */
+
+.story-expand {
+  border: none;
+  background: #8bd400;
+  color: white;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.story-expand:hover {
+  transform: translateY(-2px);
+  opacity: 0.92;
+}
+
+/* =====================================================
+   IMPACT STRIP
+===================================================== */
+
+.impact-strip {
+  max-width: 1400px;
+  margin: 0 auto 80px;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 25px;
+}
+
+.impact-item {
+  background: white;
+  border-radius: 28px;
+  padding: 35px 20px;
+  text-align: center;
+  border: 1px solid #edf2f5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.impact-item strong {
+  display: block;
+  font-size: 1.4rem;
+  color: #8bd400;
+  margin-bottom: 10px;
+}
+
+.impact-item span {
+  color: #666;
+}
+
+/* =====================================================
+   CTA
+===================================================== */
+
+.final-callout {
+  max-width: 1400px;
+  margin: 0 auto 80px;
+  padding: 0 24px;
+}
+
+.callout-card {
+  border-radius: 36px;
+  background: linear-gradient(135deg, #8bd400, #73bc00);
+
+  padding: 70px 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.callout-card::before {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  top: -250px;
+  right: -150px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.callout-card::after {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  top: 250px;
+  right: 150px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.callout-card h2 {
+  color: white;
+  font-size: 3rem;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.callout-card p {
+  color: white;
+  max-width: 850px;
+  margin: 0 auto 16px;
+  line-height: 1.9;
+  font-size: 1.1rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* =====================================================
+   ANIMATIONS
+===================================================== */
+
+.hero-section,
+.story-rail-header,
+.impact-item,
+.callout-card {
+  animation: fadeUp 0.7s ease;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1200px) {
+  .impact-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-section {
+    padding-top: 70px;
+  }
+
+  .story-panel {
+    flex: 0 0 380px;
+    min-height: 500px;
+  }
+
+  .big-quote {
+    font-size: 2rem;
+  }
+
+  .callout-card {
+    padding: 50px 30px;
+  }
+
+  .callout-card h2 {
+    font-size: 2.2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .impact-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .story-panel {
+    flex: 0 0 320px;
+    min-height: auto;
+  }
+
+  .stories-carousel::before,
+  .stories-carousel::after {
+    width: 60px;
+  }
+}

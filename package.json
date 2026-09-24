@@ -1,0 +1,19 @@
+{
+  "name": "knowledgehub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "git:init": "node pp-sync.js git:init",
+    "git:remote": "node pp-sync.js git:remote",
+    "git:status": "node pp-sync.js git:status",
+    "git:issues": "gh issue list --limit 1000 --state open --json number,title,body,labels,assignees,createdAt,comments --jq \"map(select([.labels[].name | ascii_downcase] | index(\\\"wontfix\\\") | not))\" > open-issues.json",
+    "save": "node pp-sync.js save",
+    "pull:dev": "node pp-sync.js pull:dev",
+    "push:dev": "node pp-sync.js push:dev",
+    "pull:prod": "node pp-sync.js pull:prod",
+    "push:prod": "node pp-sync.js push:prod"
+  },
+  "devDependencies": {
+    "dotenv": "^16.0.0"
+  }
+}
