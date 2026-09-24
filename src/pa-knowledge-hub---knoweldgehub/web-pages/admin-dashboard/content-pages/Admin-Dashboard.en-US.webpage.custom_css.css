@@ -7,7 +7,7 @@
 
 .admin-action-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 24px;
 }
 
@@ -1084,7 +1084,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #8bd400;
+  background: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1124,7 +1124,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #f8fafc;
+  background: var(--surface-soft);
   padding: 10px 14px;
   border-radius: 12px;
   border: 1px dashed #cbd5e1;
@@ -1143,8 +1143,33 @@
 }
 
 .edit-form-help code {
-  background: #f1f5f9;
+  background: var(--surface-soft);
   padding: 2px 4px;
   border-radius: 4px;
-  color: #334155;
+  color: var(--text);
+}
+
+.edit-modal-btn.save, .admin-avatar-thumb { color: #1f2929; }
+.edit-modal-btn.save:hover { color: #fff; }
+.admin-photo-path-badge { color: var(--muted); background: var(--surface-soft); overflow-wrap: anywhere; }
+.modal-photo-preview-box .preview-text, .edit-form-help { color: var(--muted); }
+.admin-shell .dashboard-hero { align-items: flex-start; }
+.admin-action-card { padding: 24px; }
+.admin-action-card:hover { transform: translateY(-2px); }
+.admin-action-icon { width: 56px; height: 56px; border-radius: 16px; }
+.edit-modal-card { max-height: calc(100dvh - 48px); overflow-y: auto; }
+.admin-sidebar { background: var(--surface-soft); }
+@media (max-width: 600px) {
+  .admin-workspace-header { padding: 16px; gap: 16px; }
+  .workspace-header-content { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .workspace-actions { width: 100%; flex-wrap: wrap; gap: 8px; }
+  .workspace-search { flex: 0 0 100%; width: 100%; }
+  .workspace-search input { min-width: 0; }
+  .modal-close-btn { margin-left: auto; }
+  .admin-workspace-stats { padding: 12px 16px; }
+  .admin-sidebar { padding: 12px 16px; }
+  .admin-sidebar .sidebar-section + .sidebar-section { display: none; }
+  .admin-sidebar .sidebar-section:first-child { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .admin-sidebar .sidebar-section h3 { grid-column: 1 / -1; margin: 0; }
+  .admin-sidebar .sidebar-item { padding: 10px; font-size: .8rem; }
 }

@@ -5,7 +5,7 @@
 }
 
 .auth-card {
-    background: #fff;
+    background: var(--card);
     border-radius: 16px;
     padding: 40px;
     color: #111 !important;
@@ -27,7 +27,7 @@
 
 .auth-button {
     display: inline-block;
-    background: #8bd400;
+    background: var(--primary);
     color: #111;
     padding: 12px 24px;
     border-radius: 8px;

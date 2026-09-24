@@ -31,11 +31,10 @@ function get() {
       logInfo("Querying Dataverse entity set: " + entitySetName);
       
       // Basic call signature for RetrieveMultipleRecords
-      const rawResponse = Server.Connector.Dataverse.RetrieveMultipleRecords(entitySetName);
+      const rawResponse = Server.Connector.Dataverse.RetrieveMultipleRecords(entitySetName, "", true);
 
       if (!rawResponse) {
-        logInfo("Null response returned for " + entitySetName);
-        return [];
+        throw new Error("Empty response returned for " + entitySetName);
       }
 
       let parsedOuter;
@@ -48,17 +47,19 @@ function get() {
       // Handle envelope structure if stringified OData response Body is returned
       if (parsedOuter && parsedOuter.Body) {
         const bodyObj = typeof parsedOuter.Body === "string" ? JSON.parse(parsedOuter.Body) : parsedOuter.Body;
-        return Array.isArray(bodyObj.value) ? bodyObj.value : [];
+        if (!Array.isArray(bodyObj.value)) throw new Error("Missing records array.");
+        return bodyObj.value;
       }
 
       if (parsedOuter && Array.isArray(parsedOuter.value)) {
         return parsedOuter.value;
       }
 
-      return Array.isArray(parsedOuter) ? parsedOuter : [];
+      if (Array.isArray(parsedOuter)) return parsedOuter;
+      throw new Error("Unrecognised Dataverse response.");
     } catch (ex) {
       logError("Failed to fetch table records for " + entitySetName + ": " + (ex.message || String(ex)));
-      return [];
+      throw ex;
     }
   }
 
@@ -145,5 +146,69 @@ function get() {
       message: globalError.message,
       serverLogs: debug ? executionTrace : undefined,
     });
+  }
+}
+
+function post() {
+  try {
+    if (!Server.User?.contactid) throw new Error("Sign in is required.");
+    const action = Server.Context.QueryParameters?.action;
+    const raw = String(Server.Context.Body || "");
+    if (raw.length > 12000) throw new Error("Request is too large.");
+    const request = JSON.parse(raw);
+    const entity = {
+      learningPath: ["crd38_learningpaths", "crd38_learningpathid"],
+      module: ["crd38_trainingmodules", "crd38_trainingmoduleid"],
+      testimony: ["crd38_aitestimonies", "crd38_aitestimonyid"],
+    }[request.entityType];
+    if (!entity || !["createData", "updateData", "deleteData"].includes(action))
+      throw new Error("Unsupported admin action or record type.");
+    const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (action !== "createData" && !guid.test(String(request.id || "")))
+      throw new Error("A valid record ID is required.");
+
+    if (action === "deleteData") {
+      Server.Connector.Dataverse.DeleteRecord(entity[0], request.id);
+      return JSON.stringify({ success: true });
+    }
+
+    const data = request.data || {};
+    const name = String(data.name || "").trim();
+    if (!name || name.length > 200) throw new Error("Name must be 1 to 200 characters.");
+    const payload = { crd38_name: name };
+    if (request.entityType === "testimony") {
+      for (const [input, column] of [
+        ["photopath", "crd38_photopath"],
+        ["quote", "crd38_quote"],
+        ["paragraph", "crd38_paragraph"],
+        ["tags", "crd38_tags"],
+      ]) payload[column] = String(data[input] || "").trim();
+    } else {
+      const order = Number(data.displayOrder);
+      if (!Number.isInteger(order) || order < 0 || order > 100000)
+        throw new Error("Display order must be a whole number from 0 to 100000.");
+      payload.crd38_displayorder = order;
+      payload.crd38_description = String(data.description || "").trim();
+      if (request.entityType === "learningPath") {
+        payload.crd38_rolerequirement = String(data.roleRequirement || "").trim();
+      } else {
+        const pathId = String(data.learningPathId || "");
+        if (!guid.test(pathId)) throw new Error("Select a valid learning journey.");
+        payload.crd38_pageurl = String(data.pageUrl || "").trim();
+        if (!/^\/[A-Za-z0-9/_-]*$/.test(payload.crd38_pageurl))
+          throw new Error("Page URL must be a site-relative path.");
+        payload.crd38_required = data.required === true;
+        payload["crd38_LearningPathRef@odata.bind"] = `/crd38_learningpaths(${pathId})`;
+      }
+    }
+
+    if (action === "createData")
+      Server.Connector.Dataverse.CreateRecord(entity[0], JSON.stringify(payload));
+    else
+      Server.Connector.Dataverse.UpdateRecord(entity[0], request.id, JSON.stringify(payload));
+    return JSON.stringify({ success: true });
+  } catch (error) {
+    Server.Logger?.Error("AdminHub mutation failed: " + error.message);
+    return JSON.stringify({ success: false, message: error.message });
   }
 }

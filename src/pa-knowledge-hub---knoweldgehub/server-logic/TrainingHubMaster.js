@@ -5,7 +5,10 @@
 
 const debug = true;
 
-function get() {
+function get() { return handleRequest("GET"); }
+function post() { return handleRequest("POST"); }
+
+function handleRequest(method) {
   let executionTrace = [];
 
   /**
@@ -46,6 +49,7 @@ function get() {
     modules: "crd38_trainingmodules",
     learningPaths: "crd38_learningpaths",
     progress: "crd38_trainingprogresses",
+    testimonies: "crd38_aitestimonies",
   };
 
   try {
@@ -79,8 +83,13 @@ function get() {
 
     switch (action) {
       case "init":
+        if (method !== "GET") throw new Error("Init requires GET.");
         return handleInit(currentPath);
+      case "testimonies":
+        if (method !== "GET") throw new Error("Testimonies require GET.");
+        return JSON.stringify({ success: true, data: fetchTableRecords(ENTITY.testimonies, "", true) });
       case "updateState":
+        if (method !== "POST") throw new Error("State changes require POST.");
         return handleUpdateState(currentPath);
       default:
         logError("Invalid action route requested: " + action);
@@ -126,26 +135,36 @@ function get() {
       );
 
       if (!rawResponse) {
-        logInfo(`Empty response returned for ${entityLogicalName}`);
-        return [];
+        throw new Error(`Empty response returned for ${entityLogicalName}`);
       }
 
-      const outerEnvelope = JSON.parse(String(rawResponse));
+      const outerEnvelope = typeof rawResponse === "string"
+        ? JSON.parse(rawResponse) : rawResponse;
       if (!outerEnvelope || !outerEnvelope.Body) {
-        logError(
-          `Response wrapper for ${entityLogicalName} is missing the 'Body' property.`,
-        );
-        return [];
+        throw new Error(`Response wrapper for ${entityLogicalName} has no Body.`);
       }
 
-      const innerBody = JSON.parse(outerEnvelope.Body);
-      return Array.isArray(innerBody.value) ? innerBody.value : [];
+      const innerBody = typeof outerEnvelope.Body === "string"
+        ? JSON.parse(outerEnvelope.Body) : outerEnvelope.Body;
+      if (!Array.isArray(innerBody.value))
+        throw new Error(`Response for ${entityLogicalName} has no records array.`);
+      return innerBody.value;
     } catch (ex) {
       logError(
         `Failed to fetch table records for ${entityLogicalName}: ` + ex.message,
       );
-      return [];
+      throw ex;
     }
+  }
+
+  function pathAllowsJobTitle(path, jobTitle) {
+    const terms = String(path.crd38_rolerequirement || "")
+      .toLowerCase().split(",").map((term) => term.trim()).filter(Boolean);
+    const title = String(jobTitle || "").toLowerCase();
+    if (terms.some((term) => term.startsWith("!") && title.includes(term.slice(1))))
+      return false;
+    const allowed = terms.filter((term) => !term.startsWith("!"));
+    return !allowed.length || allowed.some((term) => title.includes(term));
   }
 
   /**
@@ -217,53 +236,12 @@ function get() {
         .replace(/\/$/, "");
 
       const learningPaths = fetchTableRecords(ENTITY.learningPaths, "", true);
-      const progressRecordsAll = fetchTableRecords(ENTITY.progress, "", true);
+      const progressRecords = fetchTableRecords(
+        ENTITY.progress, `$filter=_crd38_contactidref_value eq ${contactId}`, true);
       const allModules = fetchTableRecords(ENTITY.modules, "", true);
 
-      const progressRecords = progressRecordsAll.filter(
-        (r) => r._crd38_contactidref_value === contactId,
-      );
-
-      const visibleLearningPaths = learningPaths.filter((path) => {
-        const roleRequirement = (path.crd38_rolerequirement || "")
-          .trim()
-          .toLowerCase();
-        if (!roleRequirement) return true;
-
-        const currentJobTitle = contactJobTitle.toLowerCase();
-
-        const requirements = roleRequirement.split(",");
-        const excludedRoles = [];
-        const allowedRoles = [];
-
-        for (var i = 0; i < requirements.length; i++) {
-          var req = requirements[i].trim();
-          if (!req) continue;
-
-          if (req.charAt(0) === "!") {
-            var excluded = req.substring(1).trim();
-            if (excluded) excludedRoles.push(excluded);
-          } else {
-            allowedRoles.push(req);
-          }
-        }
-
-        for (var j = 0; j < excludedRoles.length; j++) {
-          if (currentJobTitle.indexOf(excludedRoles[j]) !== -1) {
-            return false;
-          }
-        }
-
-        if (allowedRoles.length === 0) return true;
-
-        for (var k = 0; k < allowedRoles.length; k++) {
-          if (currentJobTitle.indexOf(allowedRoles[k]) !== -1) {
-            return true;
-          }
-        }
-
-        return false;
-      });
+      const visibleLearningPaths = learningPaths.filter((path) =>
+        pathAllowsJobTitle(path, contactJobTitle));
 
       const visiblePathIds = new Set(
         visibleLearningPaths.map((p) => p.crd38_learningpathid),
@@ -634,13 +612,29 @@ function get() {
       }
 
       const resolvedModuleId = targetModule.crd38_trainingmoduleid;
+      const pathId = targetModule._crd38_learningpathref_value;
+      if (pathId) {
+        const contactResponse = Server.Connector.Dataverse.RetrieveRecord(
+          "contacts", contactId, "$select=jobtitle", true);
+        const contactEnvelope = JSON.parse(String(contactResponse));
+        const contact = JSON.parse(contactEnvelope.Body);
+        const path = fetchTableRecords(ENTITY.learningPaths, "", true).find(
+          (item) => String(item.crd38_learningpathid).toLowerCase() === String(pathId).toLowerCase());
+        if (!path || !pathAllowsJobTitle(path, contact.jobtitle))
+          throw new Error("This learning journey is not available to your role.");
+      }
 
-      const progressRecords = fetchTableRecords(ENTITY.progress, "", true);
+      const progressRecords = fetchTableRecords(
+        ENTITY.progress, `$filter=_crd38_contactidref_value eq ${contactId}`, true);
       const existingRecord = progressRecords.find(
         (r) =>
           r._crd38_trainingmoduleref_value === resolvedModuleId &&
           r._crd38_contactidref_value === contactId,
       );
+
+      if (existingRecord?.crd38_status === STATUS.COMPLETED &&
+          targetStatus !== STATUS.COMPLETED)
+        throw new Error("Completed modules cannot be moved back to an earlier state.");
 
       const timestamp = new Date().toISOString();
       let payload = {};
@@ -652,10 +646,7 @@ function get() {
 
         payload.crd38_status = targetStatus;
         payload.crd38_lastaccesseddate = timestamp;
-        if (
-          targetStatus === STATUS.COMPLETED ||
-          targetStatus === STATUS.VIEWED
-        ) {
+        if (targetStatus === STATUS.COMPLETED) {
           payload.crd38_completeddate = timestamp;
         }
 
@@ -670,7 +661,8 @@ function get() {
         payload.crd38_name = targetModule.crd38_name;
         payload.crd38_status = targetStatus;
         payload.crd38_lastaccesseddate = timestamp;
-        payload.crd38_completeddate = timestamp;
+        if (targetStatus === STATUS.COMPLETED)
+          payload.crd38_completeddate = timestamp;
 
         payload["crd38_ContactIdRef@odata.bind"] = `/contacts(${contactId})`;
         payload["crd38_TrainingModuleRef@odata.bind"] =

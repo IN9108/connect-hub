@@ -197,7 +197,7 @@ window.addEventListener("load", async () => {
         activeTrack.modules[0]?.crd38_pageurl;
       const activeCard = document.getElementById("dynamicActivePathCard");
 
-      if (activeCard && cardUrl) activeCard.href = cardUrl;
+      if (activeCard && cardUrl) activeCard.href = ConnectHub.sitePath(cardUrl);
 
       const detailsContainer = document.getElementById("learningPathDetails");
       if (detailsContainer) {
@@ -209,9 +209,13 @@ window.addEventListener("load", async () => {
           row.className = complete
             ? "learning-item completed"
             : "learning-item learning-item-pending";
-          row.innerHTML = `
-            <div class="learning-item-title">${complete ? "✓" : "○"} ${module.crd38_name}</div>
-            <div class="learning-item-status">${complete ? "Completed" : "Pending"}</div>`;
+          const title = document.createElement("div");
+          title.className = "learning-item-title";
+          title.textContent = `${complete ? "✓" : "○"} ${module.crd38_name || "Untitled module"}`;
+          const status = document.createElement("div");
+          status.className = "learning-item-status";
+          status.textContent = complete ? "Completed" : "Pending";
+          row.append(title, status);
           fragment.appendChild(row);
         }
 
@@ -241,12 +245,12 @@ window.addEventListener("load", async () => {
           if (unviewedResource) {
             nextStepText.textContent =
               "You've completed all required training paths! Continue exploring extra resources and tools.";
-            nextStepButton.href = unviewedResource.crd38_pageurl;
+            nextStepButton.href = ConnectHub.sitePath(unviewedResource.crd38_pageurl);
             nextStepButton.textContent = "Explore Resources";
           } else {
             nextStepText.textContent =
               "You've completed all required training paths! Continue exploring extra resources and tools.";
-            nextStepButton.href = resourceItems[0]?.crd38_pageurl || "#";
+            nextStepButton.href = ConnectHub.sitePath(resourceItems[0]?.crd38_pageurl);
             nextStepButton.textContent = "Explore Resources";
           }
         }
@@ -257,13 +261,13 @@ window.addEventListener("load", async () => {
           !currentModuleCompleted
         ) {
           nextStepText.textContent = currentModule.crd38_name;
-          nextStepButton.href = currentModule.crd38_pageurl;
+          nextStepButton.href = ConnectHub.sitePath(currentModule.crd38_pageurl);
         }
 
         // Normal progression case
         else if (nextIncompleteModule) {
           nextStepText.textContent = nextIncompleteModule.crd38_name;
-          nextStepButton.href = nextIncompleteModule.crd38_pageurl;
+          nextStepButton.href = ConnectHub.sitePath(nextIncompleteModule.crd38_pageurl);
         }
       }
     }
@@ -280,11 +284,11 @@ window.addEventListener("load", async () => {
 
         for (const item of resourceItems) {
           const card = document.createElement("a");
-          card.href = item.crd38_pageurl || "#";
+          card.href = ConnectHub.sitePath(item.crd38_pageurl);
           card.className = "resource-card";
           card.innerHTML = `
-            <h3>${item.crd38_name}</h3>
-            <p>${item.crd38_description || "Supplementary handbook reference and practice tools."}</p>
+            <h3>${ConnectHub.escapeHtml(item.crd38_name)}</h3>
+            <p>${ConnectHub.escapeHtml(item.crd38_description || "Supplementary handbook reference and practice tools.")}</p>
             ${viewedIds.has(item.crd38_trainingmoduleid) ? '<div class="resource-viewed-badge">Viewed</div>' : ""}`;
           fragment.appendChild(card);
         }

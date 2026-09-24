@@ -1,3 +1,96 @@
+window.ConnectHub = window.ConnectHub || {};
+
+(() => {
+  const root = document.documentElement;
+  const key = "connectHubTheme";
+  let saved;
+  try { saved = localStorage.getItem(key); } catch (_) {}
+  const preferred = saved === "light" || saved === "dark"
+    ? saved
+    : window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  function setTheme(theme, persist = false) {
+    root.dataset.theme = theme;
+    const button = document.getElementById("themeToggle");
+    if (button) {
+      button.setAttribute("aria-pressed", String(theme === "dark"));
+      button.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+    }
+    if (persist) try { localStorage.setItem(key, theme); } catch (_) {}
+  }
+  setTheme(preferred);
+  document.addEventListener("DOMContentLoaded", () => {
+    setTheme(root.dataset.theme);
+    document.getElementById("themeToggle")?.addEventListener("click", () =>
+      setTheme(root.dataset.theme === "dark" ? "light" : "dark", true));
+  });
+  window.ConnectHub.setTheme = setTheme;
+})();
+
+window.ConnectHub.getToken = async function () {
+  if (window.shell?.getTokenDeferred) {
+    return new Promise((resolve, reject) =>
+      window.shell.getTokenDeferred().done(resolve).fail(reject));
+  }
+  const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+  if (!token) throw new Error("Request verification token is unavailable.");
+  return token;
+};
+
+window.ConnectHub.escapeHtml = (value) => String(value ?? "")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
+window.ConnectHub.sitePath = (value) =>
+  typeof value === "string" && /^\/(?!\/)[A-Za-z0-9/_-]*\/?$/.test(value)
+    ? value : "#";
+
+window.ConnectHub.cache = (() => {
+  const pending = new Map();
+  const versions = new Map();
+  const lifetime = 15 * 60 * 1000;
+  const prefix = () => window.currentContactId ? `connecthub:v1:${window.currentContactId}:` : "";
+  return {
+    async get(key, load, force = false) {
+      const storageKey = prefix() + key;
+      let saved;
+      if (!force && prefix()) {
+        try {
+          saved = JSON.parse(sessionStorage.getItem(storageKey));
+          if (saved && Date.now() - saved.time < lifetime) return saved.value;
+        } catch (_) {}
+      }
+      if (pending.has(storageKey)) return pending.get(storageKey);
+      const version = versions.get(storageKey) || 0;
+      const request = Promise.resolve().then(load).then(value => {
+        if (prefix() && (versions.get(storageKey) || 0) === version) try {
+          sessionStorage.setItem(storageKey, JSON.stringify({ time: Date.now(), value }));
+        } catch (_) {}
+        return value;
+      }).catch(error => {
+        if (!force && saved && Date.now() - saved.time < 24 * 60 * 60 * 1000)
+          return saved.value;
+        throw error;
+      }).finally(() => {
+        if (pending.get(storageKey) === request) pending.delete(storageKey);
+      });
+      pending.set(storageKey, request);
+      return request;
+    },
+    invalidate(key) {
+      if (!prefix()) return;
+      const target = prefix() + key;
+      let stored = [];
+      try { stored = Object.keys(sessionStorage); } catch (_) {}
+      for (const storageKey of new Set([...stored, ...pending.keys()])) {
+        if (!storageKey.startsWith(target)) continue;
+        versions.set(storageKey, (versions.get(storageKey) || 0) + 1);
+        try { sessionStorage.removeItem(storageKey); } catch (_) {}
+        pending.delete(storageKey);
+      }
+    },
+  };
+})();
+
 window.TrainingHub = {
   processing: false,
   _initPromise: null,
@@ -26,17 +119,17 @@ window.TrainingHub = {
   async _callServer(action, extraParams = "", url = null) {
     const currentPath = window.location.pathname;
     if (!url)
-      url =
-        url = `/_api/serverlogics/TrainingHubMaster?action=${action}&currentPath=${encodeURIComponent(currentPath)}${extraParams}`;
+      url = `/_api/serverlogics/TrainingHubMaster?action=${action}&currentPath=${encodeURIComponent(currentPath)}${extraParams}`;
 
     const response = await fetch(url, {
-      method: "GET",
+      method: action === "updateState" ? "POST" : "GET",
+      credentials: "same-origin",
+      cache: "no-store",
       headers: {
         Accept: "application/json",
         "OData-MaxVersion": "4.0",
         "OData-Version": "4.0",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
+        __RequestVerificationToken: await ConnectHub.getToken(),
       },
     });
 
@@ -47,9 +140,12 @@ window.TrainingHub = {
     }
 
     const envelope = await response.json();
-    const parsedData = JSON.parse(envelope.data);
+    if (envelope.success === false)
+      throw new Error(envelope.message || "Server request failed.");
+    const parsedData = typeof envelope.data === "string"
+      ? JSON.parse(envelope.data) : envelope.data;
 
-    if (!parsedData.success) {
+    if (!parsedData || parsedData.success !== true) {
       throw new Error(
         parsedData.message ||
           "An error occurred inside the server script execution routine.",
@@ -59,14 +155,18 @@ window.TrainingHub = {
     return parsedData;
   },
 
-  async init() {
+  async init(force = false) {
     if (this._initPromise) {
       return this._initPromise;
     }
 
     this._initPromise = (async () => {
       try {
-        const serverResult = await this._callServer("init");
+        const serverResult = await ConnectHub.cache.get(
+          `training:${window.location.pathname.toLowerCase()}`,
+          () => this._callServer("init"),
+          force,
+        );
 
         if (typeof serverResult.data === "string") {
           this.state = JSON.parse(serverResult.data);
@@ -107,7 +207,8 @@ window.TrainingHub = {
       }
 
       await this._callServer("updateState", extraParams);
-      await this.init();
+      ConnectHub.cache.invalidate("training:");
+      await this.init(true);
     } catch (err) {
       throw err;
     }
@@ -148,10 +249,10 @@ window.TrainingHub = {
         current.crd38_trainingmoduleid,
       );
 
-      if (next && next.crd38_pageurl) {
+      if (next && ConnectHub.sitePath(next.crd38_pageurl) !== "#") {
         window.location.href = next.crd38_pageurl;
       } else if (current.crd38_pageurl) {
-        const rootMatch = current.crd38_pageurl.match(/^\/([^/]+)/);
+        const rootMatch = ConnectHub.sitePath(current.crd38_pageurl).match(/^\/([^/]+)/);
         window.location.href = rootMatch ? `/${rootMatch[1]}/` : "/";
       } else {
         window.location.href = "/";
@@ -278,11 +379,11 @@ window.TrainingHub = {
           </svg>
         </div>
         <div class="lh-toast-content">
-          <h4 class="lh-toast-title">${titleText}</h4>
-          <p class="lh-toast-desc">${descText}</p>
+          <h4 class="lh-toast-title">${ConnectHub.escapeHtml(titleText)}</h4>
+          <p class="lh-toast-desc">${ConnectHub.escapeHtml(descText)}</p>
         </div>
         <div class="lh-toast-actions">
-          <a href="${actionUrl}" class="lh-toast-btn-action">Explore</a>
+          <a href="${ConnectHub.sitePath(actionUrl)}" class="lh-toast-btn-action">Explore</a>
           <button type="button" class="lh-toast-btn-close" aria-label="Dismiss notification">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -344,6 +445,7 @@ window.TrainingHub = {
 
     if (current && !document.getElementById("completeModule")) {
       learningPathTitle = current.crd38_name || "Training";
+      labelDiv.textContent = learningPathTitle;
       return;
     }
 
@@ -369,12 +471,7 @@ window.TrainingHub = {
 };
 
 window.addEventListener("DOMContentLoaded", async () => {
-  if (
-    window.location.href
-      .split("/")
-      .reverse()
-      .filter((url) => url === "admin").length > 0
-  ) {
+  if (/^\/admin(?:-dashboard)?(?:\/|$|\.)/i.test(window.location.pathname)) {
     return;
   }
 

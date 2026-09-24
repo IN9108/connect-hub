@@ -1,0 +1,159 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedcommondataserviceforapps_75914"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_azuread": {
+        "api": {
+          "name": "shared_azuread"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedazuread_448c9"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_office365users": {
+        "api": {
+          "name": "shared_office365users"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365users_5e9c8"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_row_is_added,_modified_or_deleted": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "subscriptionRequest/message": 4,
+              "subscriptionRequest/entityname": "contact",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "crd38_refreshfromentra"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "conditions": []
+        }
+      },
+      "actions": {
+        "Condition": {
+          "type": "If",
+          "expression": {
+            "or": [
+              {
+                "equals": [
+                  "@triggerOutputs()?['body/crd38_refreshfromentra']",
+                  true
+                ]
+              },
+              {
+                "equals": [
+                  "@empty(triggerOutputs()?['body/jobtitle'])",
+                  true
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Get_user": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@triggerOutputs()?['body/emailaddress1']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_azuread",
+                  "operationId": "GetUser",
+                  "connectionName": "shared_azuread"
+                }
+              }
+            },
+            "Update_a_row": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "entityName": "contacts",
+                  "recordId": "@triggerOutputs()?['body/contactid']",
+                  "item/firstname": "@outputs('Get_user')?['body/givenName']",
+                  "item/jobtitle": "@if(empty(outputs('Get_user')?['body/jobTitle']), 'Placeholder', outputs('Get_user')?['body/jobTitle'])",
+                  "item/lastname": "@outputs('Get_user')?['body/surname']",
+                  "item/crd38_entraid": "@outputs('Get_user')?['body/id']",
+                  "item/crd38_officeid": "@outputs('Get_user_profile_(V2)')?['body/id']",
+                  "item/crd38_refreshfromentra": false
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                  "operationId": "UpdateOnlyRecord",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              },
+              "runAfter": {
+                "Get_user_profile_(V2)": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Get_user_profile_(V2)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "id": "@outputs('Get_user')?['body/id']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+                  "operationId": "UserProfile_V2",
+                  "connectionName": "shared_office365users"
+                }
+              },
+              "runAfter": {
+                "Get_user": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Terminate": {
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Cancelled"
+                }
+              }
+            }
+          },
+          "runAfter": {}
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -2,21 +2,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   let stories = [];
 
   try {
-    const response = await fetch("/ai-testimonies.json", {
-      cache: "no-cache",
+    stories = await ConnectHub.cache.get("testimonies", async () => {
+      try {
+        const result = await TrainingHub._callServer("testimonies");
+        if (Array.isArray(result.data) && result.data.length)
+          return result.data.map((item) => ({
+            name: item.crd38_name || "",
+            quote: item.crd38_quote || "",
+            paragraphs: String(item.crd38_paragraph || "").split(/\n\s*\n/).filter(Boolean),
+            tags: String(item.crd38_tags || "").split(",").map((tag) => tag.trim()).filter(Boolean),
+            image: { data: item.crd38_photopath || "" },
+          }));
+      } catch (error) {
+        console.warn("Live testimonies are unavailable; using published stories.", error);
+      }
+      const response = await fetch("/ai-testimonies.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Failed to load testimonies: ${response.status}`);
+      return response.json();
     });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load testimonies: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    stories = await response.json();
-
-    if (!Array.isArray(stories)) {
-      throw new Error("ai-testimonies.json must contain an array");
-    }
+    if (!Array.isArray(stories)) throw new Error("Testimonies must contain an array.");
   } catch (error) {
     console.error("Unable to load AI testimonies:", error);
     return;
@@ -121,19 +125,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const tagSpans = (item.tags || [])
-      .map((tag) => `<span>${tag}</span>`)
+      .map((tag) => `<span>${ConnectHub.escapeHtml(tag)}</span>`)
       .join("");
 
     const paragraphHTML = (item.paragraphs || [])
-      .map((paragraph) => `<p>${paragraph}</p>`)
+      .map((paragraph) => `<p>${ConnectHub.escapeHtml(paragraph)}</p>`)
       .join("");
 
     article.appendChild(personIcon);
 
     const contentWrapper = document.createElement("div");
     contentWrapper.innerHTML = `
-      <div class="person-name">${item.name || ""}</div>
-      <div class="big-quote">"${item.quote || ""}"</div>
+      <div class="person-name">${ConnectHub.escapeHtml(item.name || "")}</div>
+      <div class="big-quote">"${ConnectHub.escapeHtml(item.quote || "")}"</div>
       ${paragraphHTML}
       <div class="story-tags">${tagSpans}</div>
     `;

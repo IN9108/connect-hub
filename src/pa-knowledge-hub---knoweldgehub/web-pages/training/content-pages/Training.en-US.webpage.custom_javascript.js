@@ -97,15 +97,14 @@ window.addEventListener("load", async () => {
       const estimatedMinutes = totalCount * 2;
 
       const card = document.createElement("a");
-      card.href = targetUrl;
+      card.href = ConnectHub.sitePath(targetUrl);
       card.className = "learning-path-card";
       card.innerHTML = `
     <div>
         <div class="path-header">
             <div>
-                <h3>${path.crd38_name || ""}</h3>
+                <h3>${ConnectHub.escapeHtml(path.crd38_name || "")}</h3>
 
-                <!--<p>${path.crd38_description || ""}</p>-->
                 <br/>
                 <br/>
 
@@ -182,7 +181,7 @@ window.addEventListener("load", async () => {
 
         const maxAttempts = 25;
         for (let i = 0; i < maxAttempts; i++) {
-          const state = await TrainingHub.init();
+          const state = await TrainingHub.init(true);
 
           if (state.modules && state.modules.length > 0) {
             renderDashboardData(state);

@@ -94,7 +94,7 @@
 }
 
 .floating-prompt:hover {
-  background: #ffffff;
+  background: var(--card);
   border-color: var(--primary);
   box-shadow: 0 8px 20px rgba(139, 197, 63, 0.25);
   color: var(--text);

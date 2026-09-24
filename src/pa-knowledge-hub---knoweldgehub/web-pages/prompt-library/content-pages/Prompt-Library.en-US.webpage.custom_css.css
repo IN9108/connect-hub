@@ -75,7 +75,7 @@
   padding: 18px 24px;
   border: 1px solid var(--border);
   border-radius: 99px;
-  background: white;
+  background: var(--card);
   font-size: 1rem;
   box-shadow: var(--shadow-sm);
   transition: all 0.25s ease;
@@ -106,7 +106,7 @@
 }
 
 .prompt-overview-card {
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 32px 24px;
@@ -157,7 +157,7 @@
 }
 
 .prompt-card {
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 28px;
@@ -195,10 +195,10 @@
   padding: 16px;
   border-left: 3px solid var(--primary);
   border-radius: 0 12px 12px 0;
-  background: #f8fafc;
+  background: var(--surface-soft);
   font-size: 1.2rem;
   line-height: 1.6;
-  color: #334155;
+  color: var(--text);
   flex-grow: 1;
 }
 
@@ -247,7 +247,7 @@
    SUBMISSION SECTION
    ========================================== */
 .best-practice-panel {
-  background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+  background: var(--surface-soft);
   border: 1px dashed var(--primary);
   border-radius: 24px;
   padding: 48px;
@@ -370,8 +370,8 @@
 .filter-btn {
   padding: 8px 16px;
   border: 1px solid #d0d5dd;
-  background-color: #ffffff;
-  color: #344054;
+  background-color: var(--card);
+  color: var(--text);
   border-radius: 20px;
   font-size: 14px;
   font-weight: 500;
@@ -380,7 +380,7 @@
 }
 
 .filter-btn:hover {
-  background-color: #f2f4f7;
+  background-color: var(--surface-soft);
   border-color: #98a2b3;
 }
 
@@ -392,4 +392,26 @@
 /* Hide filtered-out cards */
 .prompt-card.is-hidden {
   display: none !important;
+}
+
+.prompt-library-page { max-width: 1400px; margin-inline: auto; padding: 32px; }
+.prompt-library-page .training-hero { text-align: left; max-width: none; margin: 0 0 32px; padding: 0; }
+.prompt-library-page .training-hero h1 { color: var(--text); }
+.prompt-library-page .training-hero p { margin-left: 0; }
+.prompt-hero-actions { justify-content: flex-start; margin-top: 24px; }
+.hero-pill, .overview-number, .prompt-card-tag { color: var(--accent-text); }
+.prompt-overview { max-width: none; margin-bottom: 40px; }
+.prompt-overview-card { text-align: left; padding: 24px; border-radius: 16px; }
+.prompt-library-grid { grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); }
+.prompt-search, .filter-btn, .submit-prompt-btn { border-radius: 12px; min-height: 48px; }
+.submit-prompt-btn, .filter-btn.active { color: #1f2929; }
+.submit-prompt-btn:hover { color: #fff; }
+.copy-success { background: #065f46 !important; color: #fff !important; }
+.prompt-library-page .best-practice-panel { margin-top: 40px; padding: 32px; border-style: solid; }
+@media (max-width: 600px) {
+  .prompt-library-page { padding: 24px 16px; }
+  .prompt-overview { grid-template-columns: 1fr; gap: 12px; }
+  .prompt-overview-card { display: flex; align-items: center; gap: 16px; }
+  .overview-number { margin: 0; font-size: 1.5rem; }
+  .category-filter-container { flex-wrap: wrap; }
 }

@@ -10,7 +10,7 @@
 
   padding: 8px 14px;
 
-  background: #f8fafc;
+  background: var(--surface-soft);
   border: 1px solid var(--border);
 
   border-radius: 999px;
@@ -20,7 +20,4 @@
   font-weight: 600;
 }
 
-.path-duration::before {
-  content: "⏱";
-  margin-right: 6px;
-}
+.path-meta { flex-wrap: wrap; }

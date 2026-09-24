@@ -81,7 +81,18 @@ window.AdminHub = {
   /**
    * Wrapper to invoke the server-side logic endpoint (GET or POST)
    */
-  async _callServer(
+  async _callServer(action = "getAdminOverview", extraParams = "", payload = null) {
+    if (action === "getAdminOverview")
+      return ConnectHub.cache.get("admin:overview", () =>
+        this._requestServer(action, extraParams, payload));
+    const result = await this._requestServer(action, extraParams, payload);
+    ConnectHub.cache.invalidate("admin:overview");
+    ConnectHub.cache.invalidate("training:");
+    ConnectHub.cache.invalidate("testimonies");
+    return result;
+  },
+
+  async _requestServer(
     action = "getAdminOverview",
     extraParams = "",
     payload = null,
@@ -101,12 +112,13 @@ window.AdminHub = {
       Accept: "application/json",
       "OData-MaxVersion": "4.0",
       "OData-Version": "4.0",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      Pragma: "no-cache",
+      __RequestVerificationToken: await ConnectHub.getToken(),
     };
 
     const options = {
       method: payload ? "POST" : "GET",
+      credentials: "same-origin",
+      cache: "no-store",
       headers,
     };
 
@@ -149,6 +161,9 @@ window.AdminHub = {
         typeof envelope.data === "string"
           ? JSON.parse(envelope.data)
           : envelope.data;
+
+      if (parsedData?.success === false)
+        throw new Error(parsedData.message || "Admin request failed.");
 
       console.log(
         `[AdminHub._callServer] Successfully parsed payload data for [${action}]:`,
@@ -303,6 +318,32 @@ window.AdminHub = {
       });
     });
 
+    document.addEventListener("keydown", (event) => {
+      const edit = document.getElementById("visualEditModal");
+      const workspace = document.getElementById("adminModal");
+      const openModal = edit?.classList.contains("is-open") ? edit
+        : workspace?.classList.contains("is-open") ? workspace : null;
+      if (event.key === "Tab" && openModal) {
+        const focusable = [...openModal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])')];
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (!openModal.contains(document.activeElement)) {
+          event.preventDefault(); first?.focus();
+        } else if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault(); last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault(); first?.focus();
+        }
+      }
+      if (event.key !== "Escape") return;
+      if (edit?.classList.contains("is-open"))
+        this._closeEditModal();
+      else if (workspace?.classList.contains("is-open"))
+        this.closeModal();
+    });
+
+    document.getElementById("workspaceCreateBtn")?.addEventListener("click", () =>
+      this.handleCreateNew());
+
     const searchInput = document.getElementById("workspaceSearch");
     if (searchInput) {
       searchInput.addEventListener("input", (e) => {
@@ -383,10 +424,12 @@ window.AdminHub = {
       return;
     }
 
+    this._workspacePreviousFocus = document.activeElement;
     this.switchTab(type);
 
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
+    modal.querySelector("#workspaceSearch")?.focus();
   },
 
   closeModal() {
@@ -395,6 +438,7 @@ window.AdminHub = {
     if (!modal) return;
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
+    this._workspacePreviousFocus?.focus?.();
   },
 
   renderCurrentWorkspaceView() {
@@ -406,7 +450,6 @@ window.AdminHub = {
     const badgeEl = document.getElementById("workspaceType");
     const bodyEl = document.getElementById("modalBody");
     const totalCountEl = document.getElementById("workspaceTotalCount");
-    const activeCountEl = document.getElementById("workspaceActiveCount");
 
     if (!bodyEl) {
       console.error(
@@ -423,8 +466,6 @@ window.AdminHub = {
       if (badgeEl) badgeEl.textContent = "Learning Management";
       if (totalCountEl)
         totalCountEl.textContent = this.state.learningPaths.length;
-      if (activeCountEl)
-        activeCountEl.textContent = this.state.learningPaths.length;
 
       bodyEl.innerHTML = this._renderPathsTable();
     } else if (this.state.currentTab === "modules") {
@@ -451,7 +492,6 @@ window.AdminHub = {
         subtitleEl.textContent = `Managing training modules under "${journeyName}".`;
       if (badgeEl) badgeEl.textContent = "Module Management";
       if (totalCountEl) totalCountEl.textContent = filteredModules.length;
-      if (activeCountEl) activeCountEl.textContent = filteredModules.length;
 
       bodyEl.innerHTML = this._renderModulesTable(filteredModules, journeyName);
     } else if (this.state.currentTab === "testimonies") {
@@ -462,8 +502,6 @@ window.AdminHub = {
       if (badgeEl) badgeEl.textContent = "Content Management";
       if (totalCountEl)
         totalCountEl.textContent = this.state.testimonies.length;
-      if (activeCountEl)
-        activeCountEl.textContent = this.state.testimonies.length;
 
       bodyEl.innerHTML = this._renderTestimoniesTable();
     }
@@ -833,10 +871,12 @@ window.AdminHub = {
   /* Visual Actions */
 
   handleCreateNew() {
-    console.log(
-      `[AdminHub.handleCreateNew] Triggering create action for context tab: [${this.state.currentTab}]`,
-    );
-    alert(`Form to create new item under tab "${this.state.currentTab}".`);
+    const type = {
+      learningPaths: "learningPath",
+      modules: "module",
+      testimonies: "testimony",
+    }[this.state.currentTab];
+    if (type) this._showEditModal(type, {}, null);
   },
 
   editItem(type, id) {
@@ -919,6 +959,8 @@ window.AdminHub = {
   },
 
   _showEditModal(type, item, recordId) {
+    this._previousFocus = document.activeElement;
+    const typeLabel = { learningPath: "learning journey", module: "training module", testimony: "AI testimony" }[type] || type;
     console.log(
       `[AdminHub._showEditModal] Rendering Edit Modal for entity: ${type}, ID: ${recordId}`,
     );
@@ -933,6 +975,9 @@ window.AdminHub = {
       modalOverlay.className = "edit-modal-overlay";
       document.body.appendChild(modalOverlay);
     }
+    modalOverlay.setAttribute("role", "dialog");
+    modalOverlay.setAttribute("aria-modal", "true");
+    modalOverlay.setAttribute("aria-labelledby", "editModalTitle");
 
     let formFields = "";
     const displayOrder =
@@ -950,12 +995,12 @@ window.AdminHub = {
 
       formFields = `
         <div class="edit-form-group">
-          <label class="edit-form-label">Name:</label>
+          <label for="editName" class="edit-form-label">Name:</label>
           <input type="text" id="editName" class="edit-form-input" value="${this._escapeHtml(name)}" />
         </div>
 
         <div class="edit-form-group">
-          <label class="edit-form-label">Photo Data / Image URL:</label>
+          <label for="editImageData" class="edit-form-label">Photo Data / Image URL:</label>
           <input type="text" id="editImageData" class="edit-form-input" placeholder="e.g. /john_smith.jpg (Leave empty for fallback path)" value="${this._escapeHtml(photoPath)}" />
           <small class="edit-form-help">Computed Path: <code id="editComputedPath">${this._escapeHtml(computedPath)}</code></small>
         </div>
@@ -971,17 +1016,17 @@ window.AdminHub = {
         </div>
 
         <div class="edit-form-group">
-          <label class="edit-form-label">Quote:</label>
+          <label for="editQuote" class="edit-form-label">Quote:</label>
           <textarea id="editQuote" class="edit-form-textarea short">${this._escapeHtml(quote)}</textarea>
         </div>
 
         <div class="edit-form-group">
-          <label class="edit-form-label">Main Paragraph Content:</label>
+          <label for="editParagraphs" class="edit-form-label">Main Paragraph Content:</label>
           <textarea id="editParagraphs" class="edit-form-textarea tall">${this._escapeHtml(paragraph)}</textarea>
         </div>
 
         <div class="edit-form-group">
-          <label class="edit-form-label">Tags (comma-separated):</label>
+          <label for="editTags" class="edit-form-label">Tags (comma-separated):</label>
           <input type="text" id="editTags" class="edit-form-input" value="${this._escapeHtml(tags)}" />
         </div>
       `;
@@ -991,36 +1036,66 @@ window.AdminHub = {
 
       formFields = `
         <div class="edit-form-group">
-          <label class="edit-form-label">Title / Name:</label>
+          <label for="editTitle" class="edit-form-label">Title / Name:</label>
           <input type="text" id="editTitle" class="edit-form-input" value="${this._escapeHtml(title)}" />
         </div>
 
         <div class="edit-form-group">
-          <label class="edit-form-label">Display Order:</label>
+          <label for="editDisplayOrder" class="edit-form-label">Display Order:</label>
           <input type="number" id="editDisplayOrder" class="edit-form-input" value="${displayOrder}" />
         </div>
 
         <div class="edit-form-group">
-          <label class="edit-form-label">Description:</label>
+          <label for="editDescription" class="edit-form-label">Description:</label>
           <textarea id="editDescription" class="edit-form-textarea medium">${this._escapeHtml(description)}</textarea>
         </div>
       `;
+      if (type === "learningPath") {
+        formFields += `
+          <div class="edit-form-group">
+            <label for="editRoleRequirement" class="edit-form-label">Job title rule</label>
+            <input id="editRoleRequirement" class="edit-form-input" value="${this._escapeHtml(item.crd38_rolerequirement || "")}" />
+            <small class="edit-form-help">Leave blank for everyone. Separate job title terms with commas; prefix exclusions with !.</small>
+          </div>`;
+      } else if (type === "module") {
+        const selected = item._crd38_learningpathref_value || this.state.selectedJourneyId || "";
+        formFields += `
+          <div class="edit-form-group">
+            <label for="editLearningPath" class="edit-form-label">Learning journey</label>
+            <select id="editLearningPath" class="edit-form-input" required>
+              <option value="">Select a journey</option>
+              ${this.state.learningPaths.map(path => {
+                const id = path.crd38_learningpathid;
+                return `<option value="${this._escapeHtml(id)}" ${id === selected ? "selected" : ""}>${this._escapeHtml(path.crd38_name || "Untitled journey")}</option>`;
+              }).join("")}
+            </select>
+          </div>
+          <div class="edit-form-group">
+            <label for="editPageUrl" class="edit-form-label">Page URL</label>
+            <input id="editPageUrl" class="edit-form-input" value="${this._escapeHtml(item.crd38_pageurl || "")}" placeholder="/training/module" required />
+          </div>
+          <div class="edit-form-group">
+            <label for="editRequired" class="edit-form-label">Required module</label>
+            <input id="editRequired" type="checkbox" ${item.crd38_required ? "checked" : ""} />
+          </div>`;
+      }
     }
 
     modalOverlay.innerHTML = `
       <div class="edit-modal-card">
-        <h2 class="edit-modal-title">Edit ${type}</h2>
+        <h2 id="editModalTitle" class="edit-modal-title">${recordId ? "Edit" : "Create"} ${typeLabel}</h2>
         <form id="editForm">
           ${formFields}
           <div class="edit-modal-actions">
             <button type="button" class="edit-modal-btn cancel" data-action="close-edit-modal">Cancel</button>
-            <button type="submit" class="edit-modal-btn save" id="saveEditBtn">Save Changes</button>
+            <button type="submit" class="edit-modal-btn save" id="saveEditBtn">${recordId ? "Save changes" : "Create"}</button>
           </div>
         </form>
       </div>
     `;
 
     modalOverlay.classList.add("is-open");
+    modalOverlay.querySelector("input, textarea, select")?.focus();
 
     // Dynamic reactive preview when updating image inputs
     const imageInput = document.getElementById("editImageData");
@@ -1097,6 +1172,13 @@ window.AdminHub = {
               description:
                 document.getElementById("editDescription")?.value || "",
             };
+            if (type === "learningPath")
+              payloadData.roleRequirement = document.getElementById("editRoleRequirement")?.value || "";
+            if (type === "module") {
+              payloadData.learningPathId = document.getElementById("editLearningPath")?.value || "";
+              payloadData.pageUrl = document.getElementById("editPageUrl")?.value || "";
+              payloadData.required = document.getElementById("editRequired")?.checked === true;
+            }
           }
 
           const updatePayload = {
@@ -1109,7 +1191,7 @@ window.AdminHub = {
             "[AdminHub._showEditModal] Submitting update payload to server:",
             updatePayload,
           );
-          await this._callServer("updateData", "", updatePayload);
+          await this._callServer(recordId ? "updateData" : "createData", "", updatePayload);
 
           this._closeEditModal();
 
@@ -1121,7 +1203,12 @@ window.AdminHub = {
           this.state.learningPaths = freshData.learningPaths || [];
           this.state.modules = freshData.modules || [];
           this.state.testimonies = freshData.testimonies || [];
+          if (freshData.summaryStats) this.state.summaryStats = {
+            ...freshData.summaryStats,
+            testimoniesCount: this.state.testimonies.length,
+          };
 
+          this.renderStats();
           this.renderCurrentWorkspaceView();
         } catch (err) {
           console.error(
@@ -1132,7 +1219,7 @@ window.AdminHub = {
         } finally {
           if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.textContent = "Save Changes";
+            saveBtn.textContent = recordId ? "Save changes" : "Create";
           }
         }
       });
@@ -1145,6 +1232,7 @@ window.AdminHub = {
     if (modalOverlay) {
       modalOverlay.classList.remove("is-open");
     }
+    this._previousFocus?.focus?.();
   },
 };
 

@@ -107,7 +107,7 @@
 <div id="adminModal" class="admin-modal" aria-hidden="true">
   <div class="admin-modal-overlay" data-close-modal></div>
 
-  <div class="admin-modal-container">
+  <div class="admin-modal-container" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="admin-workspace-header">
       <div class="workspace-header-content">
         <div class="workspace-badge">
@@ -131,6 +131,7 @@
           <input
             id="workspaceSearch"
             type="text"
+            aria-label="Search records"
             placeholder="Search records..."
           />
         </div>
@@ -153,15 +154,6 @@
           <label>Total Records</label>
         </div>
 
-        <div class="workspace-stat">
-          <span id="workspaceActiveCount">0</span>
-          <label>Active</label>
-        </div>
-      </div>
-
-      <div class="workspace-filter-chips">
-        <button class="filter-chip active">All</button>
-        <button class="filter-chip">Active</button>
       </div>
     </div>
 
@@ -189,10 +181,6 @@
             Create New
           </button>
 
-          <button class="sidebar-item">
-            <i class="fi fi-rr-copy"></i>
-            Duplicate Selected
-          </button>
         </div>
       </aside>
 
