@@ -20,7 +20,8 @@ const server = {
   Logger: { Log() {}, Error() {} },
   Connector: { Dataverse: {
     RetrieveRecord(entity) {
-      const value = entity === "contacts" ? { jobtitle: "Agent" } : moduleRecord;
+      const value = entity === "contacts" ? { jobtitle: "Agent" }
+        : entity === "crd38_learningpaths" ? learningPath : moduleRecord;
       return JSON.stringify({ Body: JSON.stringify(value) });
     },
     RetrieveMultipleRecords(entity, query) {
@@ -49,7 +50,8 @@ const progress = calls.find(([method, entity]) => method === "create" && entity 
 assert.equal(progress.crd38_status, 189370002);
 assert.equal(progress.crd38_completeddate, undefined, "Viewing must not mark a module complete");
 
-server.Connector.Dataverse.RetrieveRecord = (entity) => JSON.stringify({ Body: JSON.stringify(entity === "contacts" ? { jobtitle: "Manager" } : moduleRecord) });
+server.Connector.Dataverse.RetrieveRecord = (entity) => JSON.stringify({ Body: JSON.stringify(entity === "contacts" ? { jobtitle: "Manager" }
+  : entity === "crd38_learningpaths" ? learningPath : moduleRecord) });
 assert.equal(JSON.parse(training.post()).success, false, "Role restricted progress must be rejected");
 
 const admin = { Server: server };

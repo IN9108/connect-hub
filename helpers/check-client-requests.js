@@ -17,8 +17,8 @@ const browser = {
   localStorage: { getItem() { return null; } },
   sessionStorage: {
     getItem(key) { return saved.get(key) || null; },
-    setItem(key, value) { saved.set(key, value); },
-    removeItem(key) { saved.delete(key); },
+    setItem(key, value) { saved.set(key, value); this[key] = value; },
+    removeItem(key) { saved.delete(key); delete this[key]; },
   },
   matchMedia() { return { matches: true }; },
   addEventListener() {},
@@ -47,5 +47,10 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "src", "pa-knowled
   assert.equal(requests.length, 3, "Training must reuse the Home dashboard cache");
   await browser.TrainingHub.init(true);
   assert.equal(requests.length, 4, "Forced refresh must still fetch");
+  await browser.TrainingHub.updateState(browser.TrainingHub.STATUS.COMPLETED, "module-id");
+  assert.equal(requests.length, 5, "Saving progress must not fetch a full dashboard before navigation");
+  assert.equal(requests[4].options.method, "POST");
+  await browser.TrainingHub.init();
+  assert.equal(requests.length, 6, "The next page must fetch fresh progress after a save");
   console.log("PASS ConnectHub client requests");
 })().catch(error => { console.error(error); process.exitCode = 1; });

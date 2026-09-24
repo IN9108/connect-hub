@@ -1,18 +1,12 @@
-window.addEventListener("load", async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const pathsContainer = document.getElementById(
     "dynamicLearningPathsContainer",
   );
   if (!pathsContainer) return;
 
-  const getLoadingTemplate = (
-    title = "Refreshing your role",
-    subtitle = "Checking for updated learning journeys...",
-  ) => `
-    <div class="loading-state">
-      <div class="loading-spinner"></div>
-      <div class="loading-title">${title}</div>
-      <div class="loading-subtitle">${subtitle}</div>
-    </div>`;
+  const getLoadingTemplate = () => `
+    <div class="skeleton-card" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="skeleton-card" aria-hidden="true"><span></span><span></span><span></span></div>`;
 
   /**
    * Render dashboard helper with client-side sorting safely applied
@@ -149,10 +143,8 @@ window.addEventListener("load", async () => {
    * Synchronizes data layers and handles card rendering sequences
    */
   async function loadDashboard() {
-    pathsContainer.innerHTML = getLoadingTemplate(
-      "Loading courses",
-      "Assembling your personalized learning journeys...",
-    );
+    if (!ConnectHub.cache.has("training:dashboard"))
+      pathsContainer.innerHTML = getLoadingTemplate();
     try {
       const state = await TrainingHub.init();
       renderDashboardData(state);

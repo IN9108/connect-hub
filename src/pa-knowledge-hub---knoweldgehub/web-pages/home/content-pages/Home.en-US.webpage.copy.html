@@ -1,3 +1,8 @@
+<script>
+  if (window.ConnectHub?.cache?.has("training:dashboard")) {
+    document.documentElement.classList.add("has-dashboard-cache");
+  }
+</script>
 <div id="loadingOverlay" class="loading-overlay">
   <div class="loading-box">
     <div class="loading-spinner"></div>
@@ -68,7 +73,7 @@
       <p>Approved tools and practical materials for your work.</p>
     </div>
     <div id="dynamicResourcesContainer" class="resource-grid">
-      <div class="loading-state">Loading tools and materials...</div>
+      <div class="skeleton-card" role="status" aria-label="Loading tools and materials"><span></span><span></span><span></span></div>
     </div>
   </section>
 
@@ -76,13 +81,13 @@
     <div class="dashboard-card feature-card">
       <span class="section-kicker"> Last Activity </span>
       <h2>Recent Learning</h2>
-      <p id="recentActivityText">Loading...</p>
+      <p id="recentActivityText" class="skeleton-line"></p>
     </div>
 
     <div class="dashboard-card feature-card">
       <span class="section-kicker"> Recommended Next Step </span>
       <h2>Continue Learning</h2>
-      <p id="nextStepText">Loading...</p>
+      <p id="nextStepText" class="skeleton-line"></p>
       <div style="margin-top: 15px">
         <a href="/training" class="primary-btn" id="nextStepButton">
           Continue
@@ -100,8 +105,8 @@
     <a href="/training" class="learning-path-card" style="display: block">
       <div class="path-header">
         <div>
-          <h3 id="dynamicPathTitle">Loading Path...</h3>
-          <p id="dynamicPathDesc">...</p>
+          <h3 id="dynamicPathTitle" class="skeleton-line"></h3>
+          <p id="dynamicPathDesc" class="skeleton-line"></p>
         </div>
         <span id="trainingStatus" class="status-pill"> In Progress </span>
       </div>
@@ -126,7 +131,7 @@
 
     <div class="dashboard-card">
       <div id="learningPathDetails">
-        <div class="loading-state">Loading learning items...</div>
+        <div class="skeleton-card" role="status" aria-label="Loading learning items"><span></span><span></span><span></span></div>
       </div>
     </div>
   </section>

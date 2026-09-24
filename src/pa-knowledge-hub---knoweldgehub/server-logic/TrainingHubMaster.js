@@ -618,19 +618,19 @@ function handleRequest(method) {
           "contacts", contactId, "$select=jobtitle", true);
         const contactEnvelope = JSON.parse(String(contactResponse));
         const contact = JSON.parse(contactEnvelope.Body);
-        const path = fetchTableRecords(ENTITY.learningPaths, "", true).find(
-          (item) => String(item.crd38_learningpathid).toLowerCase() === String(pathId).toLowerCase());
+        const pathResponse = Server.Connector.Dataverse.RetrieveRecord(
+          ENTITY.learningPaths, pathId, "$select=crd38_rolerequirement", true);
+        const pathEnvelope = JSON.parse(String(pathResponse));
+        const path = JSON.parse(pathEnvelope.Body);
         if (!path || !pathAllowsJobTitle(path, contact.jobtitle))
           throw new Error("This learning journey is not available to your role.");
       }
 
       const progressRecords = fetchTableRecords(
-        ENTITY.progress, `$filter=_crd38_contactidref_value eq ${contactId}`, true);
-      const existingRecord = progressRecords.find(
-        (r) =>
-          r._crd38_trainingmoduleref_value === resolvedModuleId &&
-          r._crd38_contactidref_value === contactId,
-      );
+        ENTITY.progress,
+        `$filter=_crd38_contactidref_value eq ${contactId} and _crd38_trainingmoduleref_value eq ${resolvedModuleId}`,
+        true);
+      const existingRecord = progressRecords[0];
 
       if (existingRecord?.crd38_status === STATUS.COMPLETED &&
           targetStatus !== STATUS.COMPLETED)

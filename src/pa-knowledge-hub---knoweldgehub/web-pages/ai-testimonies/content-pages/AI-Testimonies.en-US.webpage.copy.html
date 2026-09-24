@@ -1,13 +1,11 @@
 <div class="stories-page">
   <section class="hero-section">
-    <div class="hero-pill">Real Stories. Real People. Real Results.</div>
     <h1>How People Across Interact Are Using Copilot</h1>
     <p class="hero-copy">
       Nobody starts out as an AI expert. They start with one question. These are
       the stories from colleagues who decided to give Copilot a try and
       discovered faster ways to work, learn, create and solve problems.
     </p>
-    <div class="floating-tags-wrapper" id="floatingTagsWrapper"></div>
   </section>
 
   <section class="story-rail-header">
@@ -17,6 +15,11 @@
       helped them both at work and in everyday life.
     </p>
   </section>
+
+  <div id="storiesLoading" class="stories-loading" role="status" aria-label="Loading employee stories">
+    <div class="skeleton-card" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="skeleton-card" aria-hidden="true"><span></span><span></span><span></span></div>
+  </div>
 
   <section
     class="stories-carousel"

@@ -11,7 +11,8 @@ window.ConnectHub = window.ConnectHub || {};
     const button = document.getElementById("themeToggle");
     if (button) {
       button.setAttribute("aria-pressed", String(theme === "dark"));
-      button.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+      button.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+      button.title = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
     }
     if (persist) try { localStorage.setItem(key, theme); } catch (_) {}
   }
@@ -218,7 +219,6 @@ window.TrainingHub = {
 
       await this._callServer("updateState", extraParams);
       ConnectHub.cache.invalidate("training:");
-      await this.init(true);
     } catch (err) {
       throw err;
     }
@@ -287,6 +287,14 @@ window.TrainingHub = {
     const completePanel = document.getElementById("moduleCompletePanel");
 
     if (!completePanel) return;
+
+    if (!completePanel.querySelector(".return-to-top")) {
+      const topLink = document.createElement("a");
+      topLink.className = "return-to-top";
+      topLink.href = "#";
+      topLink.textContent = "Return to top";
+      completePanel.appendChild(topLink);
+    }
 
     completePanel.style.display = "block";
 
@@ -426,58 +434,6 @@ window.TrainingHub = {
     });
   },
 
-  _mountHeroLabelPlaceholder() {
-    const heroEl = document.querySelector(".training-hero");
-    if (
-      !heroEl ||
-      heroEl.querySelector(".hero-label") ||
-      heroEl.querySelector(".hero-pill")
-    )
-      return;
-
-    const labelDiv = document.createElement("div");
-    labelDiv.className = "hero-label";
-    labelDiv.id = "heroLabelContainer";
-    labelDiv.textContent = "Training";
-
-    heroEl.insertBefore(labelDiv, heroEl.firstChild);
-  },
-
-  _updateHeroLabelText() {
-    const labelDiv =
-      document.getElementById("heroLabelContainer") ||
-      document.querySelector(".hero-label");
-    if (!labelDiv) return;
-
-    let learningPathTitle = "Training";
-
-    const current = this.getCurrentModule();
-
-    if (current && !document.getElementById("completeModule")) {
-      learningPathTitle = current.crd38_name || "Training";
-      labelDiv.textContent = learningPathTitle;
-      return;
-    }
-
-    if (current && current._crd38_learningpathref_value) {
-      const match = this.getLearningPaths().find(
-        (p) => p.crd38_learningpathid == current._crd38_learningpathref_value,
-      );
-      if (match && match.crd38_name) {
-        learningPathTitle = match.crd38_name;
-      }
-    } else if (
-      this.state.visibleLearningPaths &&
-      this.state.visibleLearningPaths.length > 0
-    ) {
-      learningPathTitle =
-        this.state.visibleLearningPaths[0].name ||
-        window.location.pathname.split("/")[1] ||
-        "Training";
-    }
-
-    labelDiv.textContent = learningPathTitle;
-  },
 };
 
 window.addEventListener("DOMContentLoaded", async () => {
@@ -485,12 +441,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  TrainingHub._mountHeroLabelPlaceholder();
-
   try {
     await TrainingHub.init();
-
-    TrainingHub._updateHeroLabelText();
 
     const activeModule = TrainingHub.getCurrentModule();
     if (activeModule) {

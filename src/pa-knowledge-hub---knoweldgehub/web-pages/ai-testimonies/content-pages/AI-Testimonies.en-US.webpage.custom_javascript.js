@@ -4,16 +4,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     stories = await ConnectHub.cache.get("testimonies", async () => {
       let published = [];
-      try {
+      const [publishedResult, liveResult] = await Promise.allSettled([(async () => {
         const response = await fetch("/ai-testimonies.json", { cache: "no-store" });
         if (!response.ok) throw new Error(`Failed to load testimonies: ${response.status}`);
-        published = await response.json();
-        if (!Array.isArray(published)) throw new Error("Published testimonies must contain an array.");
-      } catch (error) {
-        console.warn("Published testimonies are unavailable.", error);
-      }
-      try {
-        const result = await TrainingHub._callServer("testimonies");
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error("Published testimonies must contain an array.");
+        return data;
+      })(), TrainingHub._callServer("testimonies")]);
+      if (publishedResult.status === "fulfilled") published = publishedResult.value;
+      else console.warn("Published testimonies are unavailable.", publishedResult.reason);
+      if (liveResult.status === "fulfilled") {
+        const result = liveResult.value;
         if (Array.isArray(result.data)) {
           const storiesByName = new Map(published.map((item) => [item.name, item]));
           result.data.forEach((item) => {
@@ -29,15 +30,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
           return [...storiesByName.values()];
         }
-      } catch (error) {
-        console.warn("Live testimonies are unavailable.", error);
-      }
+      } else console.warn("Live testimonies are unavailable.", liveResult.reason);
       if (published.length) return published;
       throw new Error("No testimonies are available.");
     });
     if (!Array.isArray(stories)) throw new Error("Testimonies must contain an array.");
   } catch (error) {
     console.error("Unable to load AI testimonies:", error);
+    const loading = document.getElementById("storiesLoading");
+    if (loading) {
+      loading.textContent = "Stories are unavailable right now. Please try again later.";
+      loading.setAttribute("role", "alert");
+    }
     return;
   }
 
@@ -109,6 +113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const carousel = document.querySelector(".stories-carousel");
   const storyHeader = document.querySelector(".story-rail-header");
   const tagsWrapper = document.getElementById("floatingTagsWrapper");
+  document.getElementById("storiesLoading")?.remove();
 
   if (!track) return;
 
