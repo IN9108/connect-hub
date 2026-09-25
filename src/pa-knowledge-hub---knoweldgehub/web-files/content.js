@@ -1,4 +1,4 @@
-(function (root) {
+(root => {
   "use strict";
 
   const kinds = new Set(["learningPath", "module", "prompt", "testimony", "agent", "page", "media"]);
@@ -8,7 +8,7 @@
     const url = String(value || "").trim();
     if (!url || /[\s\\\u0000-\u001f\u007f]/.test(url)) return "";
     if (/^#[A-Za-z][\w-]*$/.test(url)) return url;
-    if (url.startsWith("/") && !url.startsWith("//")) return url;
+    if (url.charAt(0) === "/" && url.charAt(1) !== "/") return url;
     if (/^https:\/\/[^/?#\s]+(?:[/?#][^\s]*)?$/i.test(url)) return url;
     return "";
   };

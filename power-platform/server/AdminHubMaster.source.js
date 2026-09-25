@@ -201,7 +201,7 @@ function upload(request) {
   const bytes = String(request.base64 || "");
   if (!["image/png", "image/jpeg"].includes(mime) || bytes.length > 682668 || bytes.length * 3 / 4 - (bytes.endsWith("==") ? 2 : bytes.endsWith("=") ? 1 : 0) > 512000 || bytes.length < 32 || !/^[A-Za-z0-9+/]+={0,2}$/.test(bytes) || bytes.length % 4)
     throw new Error("Upload a PNG or JPEG image of 500 KB or less.");
-  if ((mime === "image/png" && !bytes.startsWith("iVBORw0KGgo")) || (mime === "image/jpeg" && !bytes.startsWith("/9j/")))
+  if ((mime === "image/png" && bytes.indexOf("iVBORw0KGgo") !== 0) || (mime === "image/jpeg" && bytes.indexOf("/9j/") !== 0))
     throw new Error("The file contents do not match the image type.");
   const title = String(request.name || "Image").trim().slice(0, 200);
   const filename = "ch-" + id + (mime === "image/png" ? ".png" : ".jpg");

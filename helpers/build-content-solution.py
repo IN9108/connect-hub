@@ -6,6 +6,7 @@ adds the content tables and publisher flow, and fails on unknown site IDs.
 
 from __future__ import annotations
 
+import base64
 import copy
 import json
 import re
@@ -18,7 +19,7 @@ from xml.etree import ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "src/pa-knowledge-hub---knoweldgehub"
 BASE = ROOT / "ConnectHub_1_0_0_8.zip"
-OUTPUT = ROOT / "ConnectHub_1_0_0_10.zip"
+OUTPUT = ROOT / "ConnectHub_1_0_0_11.zip"
 FLOW = ROOT / "power-platform/flows/ContentPublisher.flow.json"
 SITE_ID = "4fcf5d22-8c56-43be-817c-8068dd99cfe3"
 FLOW_ID = "a5c0090a-f3aa-4d67-916d-16f04f53e526"
@@ -220,7 +221,6 @@ def patch_component(xml: bytes, data: dict, yml: Path) -> bytes:
     if component_type == 35:
         js = yml.with_name(yml.name.removesuffix(".serverlogic.yml") + ".js")
         if js.exists():
-            import base64
             content["filecontent"] = base64.b64encode(js.read_bytes()).decode()
         roles = re.findall(r"^- ([0-9a-f-]{36})$", yml.read_text(encoding="utf-8-sig"), re.MULTILINE)
         if roles:
@@ -254,7 +254,7 @@ def main() -> None:
     workflows.append(workflow)
     files["customizations.xml"] = ET.tostring(custom, encoding="utf-8", xml_declaration=True)
     solution = ET.fromstring(files["solution.xml"])
-    sub(solution.find("SolutionManifest"), "Version", "1.0.0.10")
+    sub(solution.find("SolutionManifest"), "Version", "1.0.0.11")
     roots = solution.find("SolutionManifest/RootComponents")
     for logical in ("contentitem", "contentoperation", "publishedcontent"):
         ET.SubElement(roots, "RootComponent", {"type": "1", "schemaName": "crd38_" + logical, "behavior": "0"})
@@ -272,9 +272,13 @@ def main() -> None:
         files[path] = patch_component(files[path], data, yml)
         seen.add(rowid)
         row = ET.fromstring(files[path])
-        if row.findtext("powerpagecomponenttype") == "3":
-            filename = data.get("filename") or yml.name.removesuffix(".webfile.yml")
-            source = yml.with_name(filename)
+        component_type = row.findtext("powerpagecomponenttype")
+        if component_type in {"3", "35"}:
+            if component_type == "3":
+                filename = data.get("filename") or yml.name.removesuffix(".webfile.yml")
+                source = yml.with_name(filename)
+            else:
+                source = yml.with_name(yml.name.removesuffix(".serverlogic.yml") + ".js")
             file_ref = row.findtext("filecontent")
             if source.exists() and file_ref:
                 asset_path = next((p for p in files if p.startswith(f"powerpagecomponents/{rowid}/filecontent/")), None)
@@ -319,6 +323,16 @@ def main() -> None:
     with zipfile.ZipFile(OUTPUT, "w", zipfile.ZIP_DEFLATED) as out:
         for path, content in files.items():
             out.writestr(path, content)
+    with zipfile.ZipFile(OUTPUT) as package:
+        for rowid, (data, yml) in sources.items():
+            if not yml.name.endswith(".serverlogic.yml"):
+                continue
+            script = yml.with_name(yml.name.removesuffix(".serverlogic.yml") + ".js").read_bytes()
+            row = ET.fromstring(package.read(f"powerpagecomponents/{rowid}/powerpagecomponent.xml"))
+            assert base64.b64decode(json.loads(row.findtext("content"))["filecontent"]) == script
+            asset = next((p for p in package.namelist() if p.startswith(f"powerpagecomponents/{rowid}/filecontent/")), None)
+            if asset:
+                assert package.read(asset) == script
     print(f"Built {OUTPUT.name}; patched {len(seen)} site components")
 
 
