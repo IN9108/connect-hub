@@ -18,7 +18,7 @@ from xml.etree import ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "src/pa-knowledge-hub---knoweldgehub"
 BASE = ROOT / "ConnectHub_1_0_0_8.zip"
-OUTPUT = ROOT / "ConnectHub_1_0_0_9.zip"
+OUTPUT = ROOT / "ConnectHub_1_0_0_10.zip"
 FLOW = ROOT / "power-platform/flows/ContentPublisher.flow.json"
 SITE_ID = "4fcf5d22-8c56-43be-817c-8068dd99cfe3"
 FLOW_ID = "a5c0090a-f3aa-4d67-916d-16f04f53e526"
@@ -77,6 +77,7 @@ def entity_from(template: ET.Element, integer_template: ET.Element, logical: str
     info = entity.find("EntityInfo/entity")
     entity.find("Name").text = schema
     entity.find("Name").set("LocalizedName", title)
+    entity.find("Name").set("OriginalName", title.replace(" ", ""))
     info.set("Name", schema)
     sub(info, "EntitySetName", "crd38_" + logical + "s")
     for path, value in (("LocalizedNames/LocalizedName", title), ("LocalizedCollectionNames/LocalizedCollectionName", title + "s")):
@@ -126,6 +127,14 @@ def entity_from(template: ET.Element, integer_template: ET.Element, logical: str
     for child in list(entity):
         if child.tag != "Name" and child.tag != "EntityInfo":
             entity.remove(child)
+    # Cloned state/status option-set names identify localized-label owners in Dataverse.
+    # Keeping the testimony names causes duplicate DisplayName labels during import.
+    for node in entity.iter():
+        for key, value in node.attrib.items():
+            node.set(key, value.replace("crd38_aitestimony", schema).replace("AiTestimony", title))
+        if node.text:
+            node.text = node.text.replace("crd38_aitestimony", schema).replace("AiTestimony", title)
+    assert "aitestimony" not in ET.tostring(entity, encoding="unicode").lower()
     return entity
 
 
@@ -245,7 +254,7 @@ def main() -> None:
     workflows.append(workflow)
     files["customizations.xml"] = ET.tostring(custom, encoding="utf-8", xml_declaration=True)
     solution = ET.fromstring(files["solution.xml"])
-    sub(solution.find("SolutionManifest"), "Version", "1.0.0.9")
+    sub(solution.find("SolutionManifest"), "Version", "1.0.0.10")
     roots = solution.find("SolutionManifest/RootComponents")
     for logical in ("contentitem", "contentoperation", "publishedcontent"):
         ET.SubElement(roots, "RootComponent", {"type": "1", "schemaName": "crd38_" + logical, "behavior": "0"})

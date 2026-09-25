@@ -6,6 +6,7 @@ const path = require("node:path");
 const requests = [];
 const saved = new Map();
 let failPublic = false;
+let directPublic = false;
 const browser = {
   location: { pathname: "/" },
   currentContactId: "test-contact",
@@ -26,7 +27,8 @@ const browser = {
   async fetch(url, options) {
     requests.push({ url, options });
     if (url.startsWith("/_api/serverlogics/ContentHub?"))
-      return { ok: true, json: async () => failPublic ? { success: false, message: "Unavailable" } : { success: true, data: [] } };
+      return { ok: true, json: async () => directPublic ? { success: true, data: [] }
+        : { success: true, data: JSON.stringify(failPublic ? { success: false, message: "Unavailable" } : { success: true, data: [] }) } };
     return { ok: true, json: async () => ({ success: true, data: '{"success":true,"data":{"contactId":"test-contact"}}' }) };
   },
 };
@@ -66,7 +68,9 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "src", "pa-knowled
   await assert.rejects(() => browser.ConnectHubContent.list("media"), /Unsupported list kind/);
   assert.equal(requests.length, 8, "Invalid content kind must not contact the server");
   failPublic = true;
-  await assert.rejects(() => browser.ConnectHubContent.list("testimony"));
+  await assert.rejects(() => browser.ConnectHubContent.list("testimony"), /Unavailable/);
   assert.equal(requests.length, 9, "Public errors must not fetch legacy static JSON");
+  failPublic = false; directPublic = true;
+  assert.deepEqual(Array.from(await browser.ConnectHubContent.list("agent")), [], "A direct list response must also load");
   console.log("PASS ConnectHub client requests");
 })().catch(error => { console.error(error); process.exitCode = 1; });

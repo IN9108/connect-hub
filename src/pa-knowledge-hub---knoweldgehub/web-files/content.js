@@ -117,8 +117,11 @@
       credentials: "same-origin", cache: "no-store", headers: token ? { __RequestVerificationToken: token } : {}
     });
     if (!response.ok) throw new Error(`Content request failed: ${response.status}`);
-    const result = await response.json();
-    if (!result.success || !Array.isArray(result.data)) throw new Error("Invalid content response.");
+    const envelope = await response.json();
+    if (envelope.success === false) throw new Error(envelope.message || "Content is unavailable.");
+    const result = typeof envelope.data === "string" ? JSON.parse(envelope.data) : Array.isArray(envelope.data) ? envelope : envelope.data || envelope;
+    if (result.success === false) throw new Error(result.message || "Content is unavailable.");
+    if (!Array.isArray(result.data)) throw new Error("Invalid content response.");
     return result.data;
   }
 

@@ -2,7 +2,7 @@
 
 ## Delivery
 
-`ConnectHub_1_0_0_9.zip` is an unmanaged solution built from the repository's `ConnectHub_1_0_0_8.zip`. It includes the current site source, three content tables, table permissions, the ContentHub server endpoint, and the Content Publisher cloud flow. The baseline ZIP is unchanged.
+`ConnectHub_1_0_0_10.zip` is an unmanaged solution built from the repository's `ConnectHub_1_0_0_8.zip`. It includes the current site source, three content tables, table permissions, the ContentHub server endpoint, and the Content Publisher cloud flow. The baseline ZIP is unchanged. Version 1.0.0.10 fixes the public content API envelope parsing used by Agents, Testimonies and Prompt Library. It also gives each new table its own state and status option-set names; the earlier package copied the testimony names and the tenant rejected its localized labels during import.
 
 Local checks cover source contracts, input validation, simulated Dataverse requests, editor operations, flow structure, and package contents. They do not establish successful tenant import, flow activation, a real page/image creation, or a live Power Pages render. The local browser preview was blocked by browser security policy; no alternate browser workaround was attempted.
 
